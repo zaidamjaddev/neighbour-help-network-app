@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/dashboardFragment">
+
+    <fragment
+        android:id="@+id/dashboardFragment"
+        android:name="com.example.neighbour_help_network.ui.main.dashboard.DashboardFragment"
+        android:label="Map" />
+
+    <fragment
+        android:id="@+id/nearbyFeedFragment"
+        android:name="com.example.neighbour_help_network.ui.main.feed.NearbyFeedFragment"
+        android:label="Nearby" />
+
+    <fragment
+        android:id="@+id/postRequestFragment"
+        android:name="com.example.neighbour_help_network.ui.main.post.PostRequestFragment"
+        android:label="Post" />
+
+    <fragment
+        android:id="@+id/liveChatFragment"
+        android:name="com.example.neighbour_help_network.ui.main.chat.LiveChatFragment"
+        android:label="Chat" />
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.example.neighbour_help_network.ui.main.settings.SettingsFragment"
+        android:label="Settings" />
+
+</navigation>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#2563EB</color>
+    <color name="colorPrimaryDark">#1E40AF</color>
+    <color name="colorPrimaryContainer">#EFF6FF</color>
+    <color name="colorOnPrimary">#FFFFFF</color>
+
+    <color name="colorSecondary">#475569</color>
+    <color name="colorOnSecondary">#FFFFFF</color>
+
+    <color name="colorAccent">#059669</color>
+    <color name="colorAccentDark">#047857</color>
+    <color name="colorOnAccent">#FFFFFF</color>
+
+    <color name="colorBackground">#F8FAFC</color>
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorSurfaceVariant">#F1F5F9</color>
+    <color name="colorOnSurface">#0F172A</color>
+    <color name="colorOnBackground">#0F172A</color>
+
+    <color name="colorEmergency">#DC2626</color>
+    <color name="colorEmergencyLight">#FEE2E2</color>
+    <color name="colorOnEmergency">#FFFFFF</color>
+
+    <color name="colorTextPrimary">#0F172A</color>
+    <color name="colorTextSecondary">#475569</color>
+    <color name="colorTextHint">#94A3B8</color>
+    <color name="colorTextOnDark">#FFFFFF</color>
+
+    <color name="colorDivider">#E2E8F0</color>
+    <color name="colorOutline">#CBD5E1</color>
+
+    <color name="colorChatSent">#2563EB</color>
+    <color name="colorChatReceived">#F1F5F9</color>
+    <color name="colorChatSentText">#FFFFFF</color>
+    <color name="colorChatReceivedText">#0F172A</color>
+</resources>

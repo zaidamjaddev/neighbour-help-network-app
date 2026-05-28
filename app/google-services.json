@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "654828335617",
+    "project_id": "neighbour-help-network",
+    "storage_bucket": "neighbour-help-network.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:654828335617:android:8fbe2341cfd2d242bf0600",
+        "android_client_info": {
+          "package_name": "com.example.neighbour_help_network"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "654828335617-dh08e63osi608qn1sd2tqbpru0fa63vl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.neighbour_help_network",
+            "certificate_hash": "1e057839175e0df57e3ecfdd817e4b324ce1b917"
+          }
+        },
+        {
+          "client_id": "654828335617-ai5g0vocdoie1qu27qdmga4ok3fi0427.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFgLJcm-BwffhPv6AmgvtuG-QLE_a7aes"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "654828335617-ai5g0vocdoie1qu27qdmga4ok3fi0427.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

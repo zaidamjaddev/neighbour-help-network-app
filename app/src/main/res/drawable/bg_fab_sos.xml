@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Circular crimson background for SOS FAB -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="#C62828" />
+    <stroke
+        android:width="3dp"
+        android:color="#EF5350" />
+</shape>
