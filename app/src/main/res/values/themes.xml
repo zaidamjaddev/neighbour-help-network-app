@@ -25,6 +25,12 @@
         <item name="android:windowLightStatusBar">true</item>
     </style>
 
+    <!-- Splash Theme variant -->
+    <style name="Theme.NeighbourHelpNetwork.NoActionBar" parent="Theme.NeighbourHelpNetwork">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
     <!-- Outlined TextInputLayout - Professional & Clean -->
     <style name="Widget.NHN.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
         <item name="boxStrokeColor">@color/colorPrimary</item>

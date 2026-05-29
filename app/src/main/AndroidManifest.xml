@@ -32,16 +32,22 @@
             </intent-filter>
         </service>
 
-        <!-- Auth Activity (Launcher) -->
+        <!-- Splash Activity (Launcher) -->
         <activity
-            android:name=".ui.auth.AuthActivity"
+            android:name=".ui.splash.SplashActivity"
             android:exported="true"
-            android:windowSoftInputMode="adjustPan|stateVisible">
+            android:theme="@style/Theme.NeighbourHelpNetwork.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Auth Activity -->
+        <activity
+            android:name=".ui.auth.AuthActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustPan|stateVisible" />
 
         <!-- Main Activity (Single-Activity host) -->
         <activity

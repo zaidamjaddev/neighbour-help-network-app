@@ -41,7 +41,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
                 android:fontFamily="sans-serif-medium"
-                android:text="Step 1 — Describe your need"
+                android:text="Step 1 - Describe your need"
                 android:textColor="@color/colorPrimary"
                 android:textSize="13sp"
                 android:textAllCaps="true"
@@ -91,7 +91,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 android:fontFamily="sans-serif-medium"
-                android:text="Step 2 — AI Classification"
+                android:text="Step 2 - AI Classification"
                 android:textColor="@color/colorPrimary"
                 android:textSize="13sp"
                 android:textAllCaps="true"
@@ -133,7 +133,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
                         android:fontFamily="sans-serif-medium"
-                        android:text="🤖 AI Analysis Result"
+                        android:text="AI Analysis Result"
                         android:textColor="@color/colorPrimary"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -159,7 +159,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="sans-serif-medium"
-                            android:text="—"
+                            android:text="-"
                             android:textColor="@color/colorPrimary"
                             android:textSize="14sp" />
                     </LinearLayout>
@@ -185,7 +185,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="sans-serif-medium"
-                            android:text="—"
+                            android:text="-"
                             android:textSize="14sp" />
                     </LinearLayout>
 
@@ -248,7 +248,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 android:fontFamily="sans-serif-medium"
-                android:text="Step 3 — Submit"
+                android:text="Step 3 - Submit"
                 android:textColor="@color/colorPrimary"
                 android:textSize="13sp"
                 android:textAllCaps="true"

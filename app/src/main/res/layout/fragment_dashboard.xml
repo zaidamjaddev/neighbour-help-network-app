@@ -49,7 +49,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-medium"
-                android:text="Locating…"
+                android:text="Locating..."
                 android:textColor="@color/colorTextPrimary"
                 android:textSize="13sp" />
         </LinearLayout>
@@ -89,7 +89,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
-                    android:text="🔍 Search Radius"
+                    android:text="Search Radius"
                     android:textColor="@color/colorTextPrimary"
                     android:textSize="13sp" />
 

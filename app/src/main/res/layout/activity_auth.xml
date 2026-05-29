@@ -23,22 +23,19 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <!-- App Logo / Icon -->
-        <TextView
-            android:id="@+id/tvAppIcon"
-            android:layout_width="72dp"
-            android:layout_height="72dp"
+        <ImageView
+            android:id="@+id/ivAppLogo"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
             android:layout_marginTop="28dp"
-            android:background="#33FFFFFF"
-            android:gravity="center"
-            android:text="🤝"
-            android:textSize="36sp"
+            android:src="@mipmap/ic_launcher"
+            android:scaleType="fitCenter"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@id/viewHeader"
             app:layout_constraintVertical_chainStyle="packed"
             app:layout_constraintBottom_toTopOf="@id/tvAppName" />
 
-        <!-- App Name -->
         <TextView
             android:id="@+id/tvAppName"
             android:layout_width="wrap_content"
@@ -51,9 +48,8 @@
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvAppIcon" />
+            app:layout_constraintTop_toBottomOf="@id/ivAppLogo" />
 
-        <!-- Tagline -->
         <TextView
             android:id="@+id/tvTagline"
             android:layout_width="wrap_content"

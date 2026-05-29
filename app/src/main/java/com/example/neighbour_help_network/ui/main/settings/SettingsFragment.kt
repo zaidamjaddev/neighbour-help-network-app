@@ -109,7 +109,7 @@ class SettingsFragment : Fragment() {
         val notification = NotificationCompat.Builder(requireContext(), channelId)
             .setSmallIcon(R.drawable.ic_sos)
             .setContentTitle("Test Notification")
-            .setContentText("This is a test alert from Neighbour Help Network!")
+            .setContentText("This is a test alert from HoodHelp!")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)

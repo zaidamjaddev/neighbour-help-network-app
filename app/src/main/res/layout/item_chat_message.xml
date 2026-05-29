@@ -60,7 +60,7 @@
                 android:paddingTop="2dp"
                 android:paddingEnd="6dp"
                 android:paddingBottom="2dp"
-                android:text="🌐 Translated"
+                android:text="Translated"
                 android:textColor="@color/colorAccent"
                 android:textSize="9sp"
                 android:visibility="gone" />
@@ -126,7 +126,7 @@
                 android:paddingTop="2dp"
                 android:paddingEnd="6dp"
                 android:paddingBottom="2dp"
-                android:text="🌐 Translated"
+                android:text="Translated"
                 android:textColor="@color/colorAccent"
                 android:textSize="9sp"
                 android:visibility="gone" />

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App -->
-    <string name="app_name">Neighbour Help Network</string>
+    <string name="app_name">HoodHelp</string>
     <string name="app_tagline">Connecting neighbours, one act at a time.</string>
 
     <!-- Auth Screen -->
@@ -33,25 +33,25 @@
     <!-- Dashboard -->
     <string name="label_search_radius">Search Radius: %1$d km</string>
     <string name="btn_sos_alert">SOS</string>
-    <string name="sos_dialog_title">🆘 Send SOS Alert</string>
+    <string name="sos_dialog_title">Send SOS Alert</string>
     <string name="sos_dialog_message">This will broadcast an emergency alert to all volunteers in your area. Continue?</string>
     <string name="sos_sent">SOS Alert sent to volunteers!</string>
     <string name="permission_location_rationale">Location permission is required to show nearby volunteers on the map.</string>
 
     <!-- Nearby Feed -->
     <string name="label_feed_title">Nearby Requests</string>
-    <string name="label_no_requests">No nearby requests.\nBe the first to ask for help!</string>
+    <string name="label_no_requests">No nearby requests. Be the first to ask for help!</string>
     <string name="btn_accept_help">Accept Help</string>
     <string name="label_status_open">Open</string>
     <string name="label_status_accepted">Accepted</string>
-    <string name="label_accepted_you">✓ You accepted this</string>
+    <string name="label_accepted_you">You accepted this</string>
     <string name="label_distance">%1$s away</string>
 
     <!-- Post Request -->
     <string name="label_post_title">Post a Help Request</string>
     <string name="hint_request_title">Request Title (e.g., Need medicine pickup)</string>
     <string name="hint_request_description">Describe your situation in detail…</string>
-    <string name="btn_analyze_ai">🤖 Analyze with AI Engine</string>
+    <string name="btn_analyze_ai">Analyze with AI Engine</string>
     <string name="label_ai_result_title">AI Analysis Result</string>
     <string name="label_category">Category</string>
     <string name="label_urgency">Urgency Level</string>
@@ -65,7 +65,7 @@
     <string name="label_chat_title">Community Chat</string>
     <string name="hint_message">Type a message…</string>
     <string name="btn_send">Send</string>
-    <string name="btn_translate">🌐 Translate (Urdu)</string>
+    <string name="btn_translate">Translate (Urdu)</string>
     <string name="label_translated">Translated</string>
 
     <!-- Settings -->

@@ -1,13 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Live Chat layout — keyboard-safe.
-
-  FIX: The btnTranslate was a floating sibling of cardInputArea constrained
-  to sit just above it. When the keyboard opened it overlapped the RecyclerView
-  in an unpredictable way. Now btnTranslate lives INSIDE cardInputArea so the
-  whole input block (translate strip + text field + send) moves up together
-  when adjustResize shrinks the window.
--->
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -24,12 +15,12 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:subtitle="Community · Global Chat"
+        app:subtitle="Community - Global Chat"
         app:subtitleTextColor="#AAFFFFFF"
         app:title="@string/label_chat_title"
         app:titleTextColor="@color/colorTextOnDark" />
 
-    <!-- Messages RecyclerView — fills space between toolbar and input card -->
+    <!-- Messages RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvMessages"
         android:layout_width="0dp"
@@ -42,14 +33,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/toolbarChat" />
 
-    <!--
-      Input Area Card — constrained to bottom of parent.
-      With adjustResize this block rises with the keyboard automatically.
-
-      Contains (top to bottom):
-        1. Translate toggle strip
-        2. Text input + Send FAB row
-    -->
+    <!-- Input Area Card -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardInputArea"
         style="@style/Widget.NHN.Card"
@@ -66,7 +50,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- ── Translate Toggle Strip ── -->
+            <!-- Translate Toggle Strip -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -83,7 +67,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:fontFamily="sans-serif"
-                    android:text="🌐 Translate messages"
+                    android:text="Translate messages"
                     android:textColor="@color/colorTextSecondary"
                     android:textSize="12sp" />
 
@@ -99,7 +83,7 @@
 
             </LinearLayout>
 
-            <!-- ── Message Input + Send Row ── -->
+            <!-- Message Input + Send Row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
