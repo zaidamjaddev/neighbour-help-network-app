@@ -16,6 +16,8 @@ import com.google.firebase.auth.FirebaseAuth
  */
 class HelpRequestAdapter(
     private val onAcceptClicked: (HelpRequest) -> Unit,
+    private val onCompleteClicked: (HelpRequest) -> Unit,
+    private val onChatClicked: (HelpRequest) -> Unit,
     private val onEditClicked: (HelpRequest) -> Unit,
     private val onDeleteClicked: (HelpRequest) -> Unit
 ) : ListAdapter<HelpRequest, HelpRequestAdapter.ViewHolder>(DIFF_CALLBACK) {
@@ -48,38 +50,55 @@ class HelpRequestAdapter(
                 tvUrgencyLevel.text = request.urgencyLevel
                 tvUrgencyLevel.setTextColor(urgencyColor)
 
-                // Accept button state and text visibility fix
                 val isAcceptedByMe = request.acceptedBy == currentUserId
                 val isAccepted = request.status == "accepted"
                 val isMyPost = request.userId == currentUserId
+                val isResolved = request.status == "resolved"
 
-                // Show/Hide Edit & Delete for owner ONLY if not accepted
-                if (isMyPost && !isAccepted) {
-                    btnEditRequest.visibility = View.VISIBLE
-                    btnDeleteRequest.visibility = View.VISIBLE
-                    btnAcceptHelp.visibility = View.GONE
-                    
-                    btnEditRequest.setOnClickListener { onEditClicked(request) }
-                    btnDeleteRequest.setOnClickListener { onDeleteClicked(request) }
+                // Default visibility
+                btnEditRequest.visibility = View.GONE
+                btnDeleteRequest.visibility = View.GONE
+                btnChatRequest.visibility = View.GONE
+                btnMainAction.visibility = View.GONE
+                
+                if (isResolved) {
+                    btnMainAction.visibility = View.VISIBLE
+                    btnMainAction.text = "Completed"
+                    btnMainAction.isEnabled = false
+                    btnMainAction.alpha = 0.6f
+                } else if (isMyPost) {
+                    if (isAccepted) {
+                        // Someone is helping me
+                        btnMainAction.visibility = View.VISIBLE
+                        btnMainAction.text = "Complete"
+                        btnMainAction.isEnabled = true
+                        btnMainAction.alpha = 1.0f
+                        btnMainAction.setOnClickListener { onCompleteClicked(request) }
+                        
+                        btnChatRequest.visibility = View.VISIBLE
+                        btnChatRequest.setOnClickListener { onChatClicked(request) }
+                    } else {
+                        btnEditRequest.visibility = View.VISIBLE
+                        btnDeleteRequest.visibility = View.VISIBLE
+                        btnEditRequest.setOnClickListener { onEditClicked(request) }
+                        btnDeleteRequest.setOnClickListener { onDeleteClicked(request) }
+                    }
                 } else {
-                    btnEditRequest.visibility = View.GONE
-                    btnDeleteRequest.visibility = View.GONE
-                    btnAcceptHelp.visibility = View.VISIBLE
-                }
-
-                btnAcceptHelp.isEnabled = !isAccepted
-                btnAcceptHelp.alpha = if (isAccepted) 0.6f else 1.0f
-
-                when {
-                    isAcceptedByMe -> {
-                        btnAcceptHelp.text = "✓ You Accepted"
-                    }
-                    isAccepted -> {
-                        btnAcceptHelp.text = "Helping..."
-                    }
-                    else -> {
-                        btnAcceptHelp.text = context.getString(R.string.btn_accept_help)
-                        btnAcceptHelp.setOnClickListener { onAcceptClicked(request) }
+                    btnMainAction.visibility = View.VISIBLE
+                    if (isAcceptedByMe) {
+                        btnMainAction.text = "Chat"
+                        btnMainAction.isEnabled = true
+                        btnMainAction.alpha = 1.0f
+                        btnMainAction.setOnClickListener { onChatClicked(request) }
+                    } else if (isAccepted) {
+                        btnMainAction.text = "Helping..."
+                        btnMainAction.isEnabled = false
+                        btnMainAction.alpha = 0.6f
+                    } else {
+                        btnMainAction.text = context.getString(R.string.btn_accept_help)
+                        btnMainAction.isEnabled = true
+                        btnMainAction.alpha = 1.0f
+                        btnMainAction.setOnClickListener { onAcceptClicked(request) }
                     }
                 }
             }

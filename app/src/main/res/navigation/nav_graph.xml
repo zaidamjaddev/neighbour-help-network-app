@@ -22,7 +22,12 @@
     <fragment
         android:id="@+id/liveChatFragment"
         android:name="com.example.neighbour_help_network.ui.main.chat.LiveChatFragment"
-        android:label="Chat" />
+        android:label="Community Chat" />
+
+    <fragment
+        android:id="@+id/requestChatFragment"
+        android:name="com.example.neighbour_help_network.ui.main.chat.RequestChatFragment"
+        android:label="Request Chat" />
 
     <fragment
         android:id="@+id/settingsFragment"

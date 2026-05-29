@@ -7,16 +7,16 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.neighbour_help_network.databinding.FragmentLiveChatBinding
+import com.example.neighbour_help_network.databinding.FragmentRequestChatBinding
 
 /**
- * LiveChatFragment — Real-time community chat screen (Global Chat).
- * This fragment is tied to the Bottom Navigation.
+ * RequestChatFragment — Isolated chat screen for a specific help request.
  */
-class LiveChatFragment : Fragment() {
+class RequestChatFragment : Fragment() {
 
-    private var _binding: FragmentLiveChatBinding? = null
+    private var _binding: FragmentRequestChatBinding? = null
     private val binding get() = _binding!!
     private val viewModel: LiveChatViewModel by viewModels()
 
@@ -27,16 +27,21 @@ class LiveChatFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = FragmentLiveChatBinding.inflate(inflater, container, false)
+        _binding = FragmentRequestChatBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Always global chat for this fragment
-        val chatId = "global_chat"
-        
+        val chatId = arguments?.getString("chatId") ?: return
+        val chatTitle = arguments?.getString("chatTitle") ?: "Request Chat"
+
+        binding.toolbarChat.title = chatTitle
+        binding.toolbarChat.setNavigationOnClickListener {
+            findNavController().navigateUp()
+        }
+
         setupRecyclerView()
         setupSendButton()
         setupTranslateButton()

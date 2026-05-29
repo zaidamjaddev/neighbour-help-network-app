@@ -18,24 +18,65 @@ class NearbyFeedViewModel : ViewModel() {
     private var listenerReg: ListenerRegistration? = null
 
     val requests = MutableLiveData<List<HelpRequest>>(emptyList())
-    val isLoading = MutableLiveData<Boolean>(true)
+    val isLoading = MutableLiveData<Boolean>(false)
     val actionResult = MutableLiveData<Result<Unit>?>()
+    
+    // Tracks current tab to ensure we don't show the wrong empty message
+    var currentTabPosition = 0
 
     init {
-        startListening()
+        showActiveRequests()
     }
 
-    private fun startListening() {
-        listenerReg = repository.listenToRequests { list ->
-            isLoading.postValue(false)
-            requests.postValue(list)
-        }
+    fun showActiveRequests() {
+        currentTabPosition = 0
+        startListening(listOf("open", "accepted"))
+    }
+
+    fun showHistoryRequests() {
+        currentTabPosition = 1
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        
+        isLoading.value = true
+        listenerReg?.remove()
+        listenerReg = repository.listenToUserHistory(
+            userId = uid,
+            onUpdate = { list ->
+                isLoading.postValue(false)
+                requests.postValue(list)
+            },
+            onError = {
+                isLoading.postValue(false)
+            }
+        )
+    }
+
+    private fun startListening(statusList: List<String>) {
+        isLoading.value = true
+        listenerReg?.remove()
+        listenerReg = repository.listenToRequestsByStatus(
+            statusList = statusList,
+            onUpdate = { list ->
+                isLoading.postValue(false)
+                requests.postValue(list)
+            },
+            onError = {
+                isLoading.postValue(false)
+            }
+        )
     }
 
     fun acceptRequest(requestId: String) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         viewModelScope.launch {
             val result = repository.acceptRequest(requestId, uid)
+            actionResult.postValue(result)
+        }
+    }
+
+    fun completeRequest(requestId: String) {
+        viewModelScope.launch {
+            val result = repository.completeRequest(requestId)
             actionResult.postValue(result)
         }
     }

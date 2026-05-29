@@ -1,5 +1,6 @@
 package com.example.neighbour_help_network.data.repository
 
+import android.util.Log
 import com.example.neighbour_help_network.data.model.HelpRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -18,13 +19,55 @@ class HelpRequestRepository {
         collection.add(request).await().id
     }
 
-    fun listenToRequests(onUpdate: (List<HelpRequest>) -> Unit): ListenerRegistration {
+    /**
+     * Listens to requests with specific statuses.
+     * We sort client-side to ensure immediate local updates (even with null timestamps)
+     * and to avoid requiring mandatory composite indexes for simple filtering.
+     */
+    fun listenToRequestsByStatus(
+        statusList: List<String>,
+        onUpdate: (List<HelpRequest>) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
         return collection
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(50)
+            .whereIn("status", statusList)
             .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) return@addSnapshotListener
+                if (error != null) {
+                    Log.e("HelpRequestRepo", "Error: ${error.message}")
+                    onError(error)
+                    return@addSnapshotListener
+                }
+                if (snapshot == null) return@addSnapshotListener
+                
                 val requests = snapshot.toObjects(HelpRequest::class.java)
+                    .sortedByDescending { it.timestamp?.time ?: System.currentTimeMillis() }
+                
+                onUpdate(requests)
+            }
+    }
+
+    /**
+     * Listens to resolved requests involving the user.
+     */
+    fun listenToUserHistory(
+        userId: String,
+        onUpdate: (List<HelpRequest>) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return collection
+            .whereEqualTo("status", "resolved")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("HelpRequestRepo", "History Error: ${error.message}")
+                    onError(error)
+                    return@addSnapshotListener
+                }
+                if (snapshot == null) return@addSnapshotListener
+                
+                val requests = snapshot.toObjects(HelpRequest::class.java)
+                    .filter { it.userId == userId || it.acceptedBy == userId }
+                    .sortedByDescending { it.timestamp?.time ?: System.currentTimeMillis() }
+                
                 onUpdate(requests)
             }
     }
@@ -38,16 +81,14 @@ class HelpRequestRepository {
         ).await()
     }
 
-    /**
-     * Deletes a help request by ID.
-     */
+    suspend fun completeRequest(requestId: String): Result<Unit> = runCatching {
+        collection.document(requestId).update("status", "resolved").await()
+    }
+
     suspend fun deleteRequest(requestId: String): Result<Unit> = runCatching {
         collection.document(requestId).delete().await()
     }
 
-    /**
-     * Updates an existing help request with new title/description.
-     */
     suspend fun updateRequest(requestId: String, updates: Map<String, Any>): Result<Unit> = runCatching {
         collection.document(requestId).update(updates).await()
     }

@@ -7,17 +7,19 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.neighbour_help_network.R
 import com.example.neighbour_help_network.data.model.HelpRequest
 import com.example.neighbour_help_network.databinding.FragmentNearbyFeedBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.tabs.TabLayout
 
 /**
  * NearbyFeedFragment — Real-time scrolling feed of nearby help requests.
+ * Now includes a toggle for Active vs History requests.
  */
 class NearbyFeedFragment : Fragment() {
 
@@ -39,17 +41,53 @@ class NearbyFeedFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerView()
+        setupTabs()
         observeViewModel()
+    }
+
+    private fun setupTabs() {
+        binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                when (tab?.position) {
+                    0 -> viewModel.showActiveRequests()
+                    1 -> viewModel.showHistoryRequests()
+                }
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
     }
 
     private fun setupRecyclerView() {
         adapter = HelpRequestAdapter(
             onAcceptClicked = { request -> viewModel.acceptRequest(request.id) },
+            onCompleteClicked = { request -> showCompleteConfirmation(request) },
+            onChatClicked = { request -> openChat(request) },
             onEditClicked = { request -> showUpdateDialog(request) },
             onDeleteClicked = { request -> showDeleteConfirmation(request) }
         )
         binding.rvRequests.layoutManager = LinearLayoutManager(requireContext())
         binding.rvRequests.adapter = adapter
+    }
+
+    private fun openChat(request: HelpRequest) {
+        val bundle = Bundle().apply {
+            putString("chatId", request.id)
+            putString("chatTitle", "Chat: ${request.title}")
+        }
+        // Navigate to the NEW RequestChatFragment (not in bottom nav)
+        findNavController().navigate(R.id.requestChatFragment, bundle)
+    }
+
+    private fun showCompleteConfirmation(request: HelpRequest) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Complete Request")
+            .setMessage("Mark this request as completed? It will be moved to history.")
+            .setPositiveButton("Complete") { _, _ ->
+                viewModel.completeRequest(request.id)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun showUpdateDialog(request: HelpRequest) {
@@ -98,23 +136,46 @@ class NearbyFeedFragment : Fragment() {
     }
 
     private fun observeViewModel() {
+        // Combined observer logic to prevent UI flickering and state mismatches
         viewModel.isLoading.observe(viewLifecycleOwner) { loading ->
-            binding.progressFeed.visibility = if (loading) View.VISIBLE else View.GONE
+            updateUiState(loading, viewModel.requests.value ?: emptyList())
         }
 
         viewModel.requests.observe(viewLifecycleOwner) { list ->
             adapter.submitList(list)
-            binding.layoutEmptyState.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+            updateUiState(viewModel.isLoading.value ?: false, list)
         }
 
         viewModel.actionResult.observe(viewLifecycleOwner) { result ->
             result ?: return@observe
-            if (result.isSuccess) {
-                Toast.makeText(requireContext(), "Action successful", Toast.LENGTH_SHORT).show()
-            } else {
+            if (result.isFailure) {
                 Toast.makeText(requireContext(), "Error: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
             }
             viewModel.resetActionResult()
+        }
+    }
+
+    private fun updateUiState(loading: Boolean, list: List<HelpRequest>) {
+        if (loading) {
+            binding.progressFeed.visibility = View.VISIBLE
+            binding.layoutEmptyState.visibility = View.GONE
+            binding.rvRequests.visibility = View.GONE
+        } else {
+            binding.progressFeed.visibility = View.GONE
+            if (list.isEmpty()) {
+                binding.layoutEmptyState.visibility = View.VISIBLE
+                binding.rvRequests.visibility = View.GONE
+                
+                val activeTab = binding.tabLayout.selectedTabPosition
+                binding.tvEmptyMessage.text = if (activeTab == 0) {
+                    getString(R.string.label_no_requests)
+                } else {
+                    "No completed requests found."
+                }
+            } else {
+                binding.layoutEmptyState.visibility = View.GONE
+                binding.rvRequests.visibility = View.VISIBLE
+            }
         }
     }
 
