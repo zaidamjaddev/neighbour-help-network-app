@@ -10,5 +10,7 @@ data class User(
     val phone: String = "",
     val neighborhood: String = "",
     val isVolunteer: Boolean = true,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )

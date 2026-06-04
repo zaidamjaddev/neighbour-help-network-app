@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.neighbour_help_network.data.model.ChatMessage
 import com.example.neighbour_help_network.data.repository.ChatRepository
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.launch
 
@@ -22,6 +23,8 @@ class LiveChatViewModel : ViewModel() {
     val messages = MutableLiveData<List<ChatMessage>>(emptyList())
     val sendResult = MutableLiveData<Result<Unit>?>()
     val translateEnabled = MutableLiveData<Boolean>(false)
+    val partnerPhoneNumber = MutableLiveData<String?>()
+    val partnerName = MutableLiveData<String?>()
 
     private var currentChatId: String = "global_chat"
 
@@ -51,6 +54,40 @@ class LiveChatViewModel : ViewModel() {
     /** Toggles the Urdu translation overlay on/off. */
     fun toggleTranslate() {
         translateEnabled.value = !(translateEnabled.value ?: false)
+    }
+
+    /** Fetches the other chat participant's phone number and displayName from Firestore. */
+    fun fetchPartnerPhoneNumber(chatId: String) {
+        if (chatId == "global_chat") return
+        val db = FirebaseFirestore.getInstance()
+        val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+        db.collection("help_requests").document(chatId).get()
+            .addOnSuccessListener { requestDoc ->
+                if (requestDoc.exists()) {
+                    val userId = requestDoc.getString("userId") ?: ""
+                    val acceptedBy = requestDoc.getString("acceptedBy") ?: ""
+
+                    // Determine the other participant's UID
+                    val otherUid = if (currentUid == userId) {
+                        acceptedBy
+                    } else {
+                        userId
+                    }
+
+                    if (otherUid.isNotEmpty()) {
+                        db.collection("users").document(otherUid).get()
+                            .addOnSuccessListener { userDoc ->
+                                if (userDoc.exists()) {
+                                    val phone = userDoc.getString("phone")
+                                    val name = userDoc.getString("displayName")
+                                    partnerPhoneNumber.postValue(phone)
+                                    partnerName.postValue(name)
+                                }
+                            }
+                    }
+                }
+            }
     }
 
     override fun onCleared() {

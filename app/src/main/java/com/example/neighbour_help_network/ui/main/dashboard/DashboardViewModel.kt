@@ -4,9 +4,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.neighbour_help_network.data.model.HelpRequest
+import com.example.neighbour_help_network.data.model.User
 import com.example.neighbour_help_network.data.repository.AuthRepository
 import com.example.neighbour_help_network.data.repository.HelpRequestRepository
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.launch
 
 /**
@@ -20,6 +22,8 @@ class DashboardViewModel : ViewModel() {
     val radiusKm = MutableLiveData<Int>(5)
     val sosPosted = MutableLiveData<Boolean>()
     val sosError = MutableLiveData<String>()
+    val helpers = MutableLiveData<List<User>>(emptyList())
+    private var helpersRegistration: ListenerRegistration? = null
 
     fun onRadiusChanged(km: Int) {
         radiusKm.value = km
@@ -63,5 +67,43 @@ class DashboardViewModel : ViewModel() {
                 sosError.value = e.message ?: "An error occurred."
             }
         }
+    }
+
+    /**
+     * Updates the logged-in user's coordinates in Firestore.
+     */
+    fun updateUserLocation(latitude: Double, longitude: Double) {
+        viewModelScope.launch {
+            authRepository.updateUserProfile(
+                mapOf(
+                    "latitude" to latitude,
+                    "longitude" to longitude
+                )
+            )
+        }
+    }
+
+    /**
+     * Streams active volunteers from Firestore, filtering out current user and invalid coordinates.
+     */
+    fun startListeningToHelpers() {
+        helpersRegistration?.remove()
+        helpersRegistration = authRepository.listenToVolunteers(
+            onUpdate = { list ->
+                val currentUid = authRepository.currentUser?.uid
+                val activeHelpers = list.filter {
+                    it.uid != currentUid && it.latitude != null && it.longitude != null && it.latitude != 0.0 && it.longitude != 0.0
+                }
+                helpers.postValue(activeHelpers)
+            },
+            onError = {
+                // Keep silent or log
+            }
+        )
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        helpersRegistration?.remove()
     }
 }

@@ -109,14 +109,21 @@ object LocalAiEngine {
         )
     }
 
+    private fun cleanForLookup(s: String): String {
+        return s.lowercase(Locale.getDefault())
+            .replace(Regex("[^a-z0-9\\s]"), "") // Strip punctuation
+            .replace(Regex("\\s+"), " ")        // Normalize spaces
+            .trim()
+    }
+
     fun simulateTranslation(text: String, targetLanguage: String): String {
-        val lowerText = text.lowercase(Locale.getDefault()).trim()
+        val cleanedInput = cleanForLookup(text)
 
         val translationsUrdu = mapOf(
             "hello"                     to "السلام علیکم (As-salamu alaykum)",
             "hi"                        to "ہیلو (Hi)",
             "i am on my way"            to "میں راستے میں ہوں (Main rastay mein hoon)",
-            "where are you?"            to "آپ کہاں ہیں؟ (Aap kahan hain?)",
+            "where are you"             to "آپ کہاں ہیں؟ (Aap kahan hain?)",
             "i need help"               to "مجھے مدد کی ضرورت ہے (Mujhe madad ki zaroorat hai)",
             "thank you"                 to "شکریہ (Shukriya)",
             "i am coming in 5 minutes"  to "میں 5 منٹ میں آ رہا ہوں (Main 5 minute mein aa raha hoon)",
@@ -125,13 +132,28 @@ object LocalAiEngine {
             "call me"                   to "مجھے کال کریں (Mujhe call karein)",
             "okay"                      to "ٹھیک ہے (Theek hai)",
             "no problem"                to "کوئی بات نہیں (Koi baat nahin)",
-            "are you okay?"             to "کیا آپ ٹھیک ہیں؟ (Kya aap theek hain?)",
+            "are you okay"              to "کیا آپ ٹھیک ہیں؟ (Kya aap theek hain?)",
             "wait for me"               to "میرا انتظار کریں (Mera intezar karein)",
-            "i will be there soon"      to "میں جلد وہاں پہنچ جاؤں گا (Main jald wahan pahunch jaunga)"
+            "i will be there soon"      to "میں جلد وہاں پہنچ جاؤں گا (Main jald wahan pahunch jaunga)",
+            "yes"                       to "جی ہاں (Ji haan)",
+            "no"                        to "جی نہیں (Ji nahi)",
+            "good"                      to "अच्छा (Achha)",
+            "sorry"                     to "معذرت (Maazrat)",
+            "i am sorry"                to "مجھے افسوس ہے (Mujhe afsoos hai)",
+            "bye"                       to "خدا حافظ (Khuda Hafiz)",
+            "take care"                 to "اپنا خیال رکھیں (Apna khayal rakhein)",
+            "thank you very much"       to "آپ کا بہت بہت شکریہ (Bohat bohat shukriya)",
+            "welcome"                   to "خوش آمدید (Khush aamdeed)",
+            "please"                    to "براہ کرم (Barahe karam)",
+            "thanks"                    to "شکریہ (Shukriya)",
+            "call"                      to "کال (Call)",
+            "phone"                     to "فون (Phone)",
+            "number"                    to "نمبر (Number)",
+            "help"                      to "مدد (Madad)"
         )
 
         return when (targetLanguage.lowercase(Locale.getDefault())) {
-            "urdu" -> translationsUrdu[lowerText]
+            "urdu" -> translationsUrdu[cleanedInput]
                 ?: "[Urdu]: $text"
             else   -> "[Translated]: $text"
         }

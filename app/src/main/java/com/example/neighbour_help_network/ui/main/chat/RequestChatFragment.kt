@@ -1,5 +1,7 @@
 package com.example.neighbour_help_network.ui.main.chat
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,6 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.neighbour_help_network.R
 import com.example.neighbour_help_network.databinding.FragmentRequestChatBinding
 
 /**
@@ -42,11 +45,35 @@ class RequestChatFragment : Fragment() {
             findNavController().navigateUp()
         }
 
+        // Setup Call action menu in toolbar
+        binding.toolbarChat.inflateMenu(R.menu.chat_menu)
+        val callItem = binding.toolbarChat.menu.findItem(R.id.action_call)
+        callItem?.isVisible = false // Hidden initially
+
+        binding.toolbarChat.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_call -> {
+                    val phone = viewModel.partnerPhoneNumber.value
+                    if (!phone.isNullOrBlank()) {
+                        val intent = Intent(Intent.ACTION_DIAL).apply {
+                            data = Uri.parse("tel:$phone")
+                        }
+                        startActivity(intent)
+                    } else {
+                        Toast.makeText(requireContext(), "Phone number not available.", Toast.LENGTH_SHORT).show()
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
+
         setupRecyclerView()
         setupSendButton()
         setupTranslateButton()
         observeViewModel()
 
+        viewModel.fetchPartnerPhoneNumber(chatId)
         viewModel.startListening(chatId)
     }
 
@@ -106,6 +133,11 @@ class RequestChatFragment : Fragment() {
                     Toast.LENGTH_SHORT
                 ).show()
             }
+        }
+
+        viewModel.partnerPhoneNumber.observe(viewLifecycleOwner) { phone ->
+            val callItem = binding.toolbarChat.menu.findItem(R.id.action_call)
+            callItem?.isVisible = !phone.isNullOrBlank()
         }
     }
 }

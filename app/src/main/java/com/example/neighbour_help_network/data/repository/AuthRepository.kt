@@ -5,6 +5,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -67,6 +68,23 @@ class AuthRepository {
         }
 
         usersCollection.document(uid).update(updates).await()
+    }
+
+    fun listenToVolunteers(
+        onUpdate: (List<User>) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return usersCollection
+            .whereEqualTo("isVolunteer", true)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error)
+                    return@addSnapshotListener
+                }
+                if (snapshot == null) return@addSnapshotListener
+                val volunteers = snapshot.toObjects(User::class.java)
+                onUpdate(volunteers)
+            }
     }
 
     fun signOut() {

@@ -11,20 +11,26 @@ import android.view.ViewGroup
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.example.neighbour_help_network.R
+import com.example.neighbour_help_network.data.model.User
 import com.example.neighbour_help_network.databinding.FragmentDashboardBinding
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.Circle
 import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 
 /**
@@ -39,6 +45,7 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
     private var googleMap: GoogleMap? = null
     private var radiusCircle: Circle? = null
     private var currentLocation: LatLng? = null
+    private val helperMarkers = mutableListOf<Marker>()
 
     private val fusedLocationClient by lazy {
         LocationServices.getFusedLocationProviderClient(requireActivity())
@@ -60,6 +67,7 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
         setupSeekBar()
         setupSosFab()
         observeViewModel()
+        viewModel.startListeningToHelpers()
     }
 
     override fun onDestroyView() {
@@ -123,6 +131,7 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
                         .title("You are here")
                 )
                 drawRadiusCircle(latlng, (viewModel.radiusKm.value ?: 5) * 1000.0)
+                viewModel.updateUserLocation(it.latitude, it.longitude)
             }
         }
     }
@@ -226,6 +235,51 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
                 Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
             }
         }
+
+        viewModel.helpers.observe(viewLifecycleOwner) { helpersList ->
+            updateHelperMarkers(helpersList)
+        }
+    }
+
+    private fun updateHelperMarkers(helpersList: List<User>) {
+        helperMarkers.forEach { it.remove() }
+        helperMarkers.clear()
+
+        val helperIcon = getHelperIcon()
+
+        helpersList.forEach { helper ->
+            val lat = helper.latitude
+            val lng = helper.longitude
+            if (lat != null && lng != null) {
+                val markerOptions = MarkerOptions()
+                    .position(LatLng(lat, lng))
+                    .title(helper.displayName)
+                    .snippet("Volunteer / Helper")
+
+                if (helperIcon != null) {
+                    markerOptions.icon(helperIcon)
+                } else {
+                    markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+                }
+
+                googleMap?.addMarker(markerOptions)?.let { marker ->
+                    helperMarkers.add(marker)
+                }
+            }
+        }
+    }
+
+    private fun getHelperIcon(): BitmapDescriptor? {
+        val drawable = ContextCompat.getDrawable(requireContext(), R.drawable.ic_helper) ?: return null
+        drawable.setBounds(0, 0, drawable.intrinsicWidth, drawable.intrinsicHeight)
+        val bitmap = Bitmap.createBitmap(
+            drawable.intrinsicWidth,
+            drawable.intrinsicHeight,
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bitmap)
+        drawable.draw(canvas)
+        return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
 
     companion object {
