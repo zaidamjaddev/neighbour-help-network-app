@@ -11,14 +11,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.launch
 
-/**
- * NearbyFeedViewModel — Manages the Firestore real-time stream for NearbyFeedFragment.
- *
- * Changes in this version:
- *  - acceptRequest() now writes a notification_triggers document after updating
- *    the request status. The Cloud Function picks this up and sends the FCM
- *    push to the original requester.
- */
 class NearbyFeedViewModel : ViewModel() {
 
     private val repository = HelpRequestRepository()
@@ -29,22 +21,16 @@ class NearbyFeedViewModel : ViewModel() {
     val isLoading    = MutableLiveData<Boolean>(false)
     val actionResult = MutableLiveData<Result<Unit>?>()
 
-    // Tracks current tab to ensure we don't show the wrong empty message
-    var currentTabPosition = 0
-
     init {
         showActiveRequests()
     }
 
     fun showActiveRequests() {
-        currentTabPosition = 0
         startListening(listOf("open", "accepted"))
     }
 
     fun showHistoryRequests() {
-        currentTabPosition = 1
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-
         isLoading.value = true
         listenerReg?.remove()
         listenerReg = repository.listenToUserHistory(
@@ -53,9 +39,7 @@ class NearbyFeedViewModel : ViewModel() {
                 isLoading.postValue(false)
                 requests.postValue(list)
             },
-            onError = {
-                isLoading.postValue(false)
-            }
+            onError = { isLoading.postValue(false) }
         )
     }
 
@@ -68,69 +52,52 @@ class NearbyFeedViewModel : ViewModel() {
                 isLoading.postValue(false)
                 requests.postValue(list)
             },
-            onError = {
-                isLoading.postValue(false)
-            }
+            onError = { isLoading.postValue(false) }
         )
     }
 
-    /**
-     * Accepts a help request and writes a notification trigger document so the
-     * Cloud Function can push a notification to the original requester.
-     */
     fun acceptRequest(requestId: String) {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val user = FirebaseAuth.getInstance().currentUser ?: return
+        val uid = user.uid
+        val name = user.displayName ?: "Neighbor"
+
         viewModelScope.launch {
-            val result = repository.acceptRequest(requestId, uid)
+            // Updated to pass user name for the chat list
+            val result = repository.acceptRequest(requestId, uid, name)
             actionResult.postValue(result)
 
             if (result.isSuccess) {
-                // Write a trigger document for the Cloud Function to pick up.
-                // The function listens to "notification_triggers/{id}" onCreate
-                // and sends FCM to the help request's original poster.
                 val trigger = mapOf(
                     "type"          to "request_accepted",
                     "requestId"     to requestId,
                     "acceptedByUid" to uid,
                     "timestamp"     to com.google.firebase.Timestamp.now()
                 )
-                firestore.collection("notification_triggers")
-                    .add(trigger)
-                    .addOnFailureListener { e ->
-                        Log.e("NearbyFeedViewModel", "Trigger write failed: ${e.message}")
-                    }
+                firestore.collection("notification_triggers").add(trigger)
             }
         }
     }
 
     fun completeRequest(requestId: String) {
         viewModelScope.launch {
-            val result = repository.completeRequest(requestId)
-            actionResult.postValue(result)
+            actionResult.postValue(repository.completeRequest(requestId))
         }
     }
 
     fun deleteRequest(requestId: String) {
         viewModelScope.launch {
-            val result = repository.deleteRequest(requestId)
-            actionResult.postValue(result)
+            actionResult.postValue(repository.deleteRequest(requestId))
         }
     }
 
     fun updateRequest(requestId: String, title: String, description: String) {
         viewModelScope.launch {
-            val updates = mapOf(
-                "title"       to title,
-                "description" to description
-            )
-            val result = repository.updateRequest(requestId, updates)
-            actionResult.postValue(result)
+            val updates = mapOf("title" to title, "description" to description)
+            actionResult.postValue(repository.updateRequest(requestId, updates))
         }
     }
 
-    fun resetActionResult() {
-        actionResult.value = null
-    }
+    fun resetActionResult() { actionResult.value = null }
 
     override fun onCleared() {
         super.onCleared()

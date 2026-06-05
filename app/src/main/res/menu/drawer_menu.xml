@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/dashboardFragment"
+            android:icon="@drawable/ic_home"
+            android:title="Map" />
+        <item
+            android:id="@+id/nearbyFeedFragment"
+            android:icon="@drawable/ic_feed"
+            android:title="Nearby Feed" />
+        <item
+            android:id="@+id/acceptedRequestsFragment"
+            android:icon="@drawable/ic_chat"
+            android:title="My Ongoing Help" />
+        <item
+            android:id="@+id/postRequestFragment"
+            android:icon="@drawable/ic_post"
+            android:title="Post Request" />
+        <item
+            android:id="@+id/liveChatFragment"
+            android:icon="@drawable/ic_community"
+            android:title="Community Chat" />
+        <item
+            android:id="@+id/settingsFragment"
+            android:icon="@drawable/ic_settings"
+            android:title="Settings" />
+    </group>
+</menu>

@@ -23,6 +23,7 @@ data class HelpRequest(
     val longitude: Double = 0.0,
     val status: String = "open",        // "open" | "accepted" | "resolved"
     val acceptedBy: String = "",
+    val acceptedByName: String = "",    // Name of the person who accepted help
     @ServerTimestamp
     val timestamp: Date? = null
 )

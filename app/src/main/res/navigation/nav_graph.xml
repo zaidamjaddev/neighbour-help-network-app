@@ -15,6 +15,11 @@
         android:label="Nearby" />
 
     <fragment
+        android:id="@+id/acceptedRequestsFragment"
+        android:name="com.example.neighbour_help_network.ui.main.chat.AcceptedRequestsFragment"
+        android:label="My Help" />
+
+    <fragment
         android:id="@+id/postRequestFragment"
         android:name="com.example.neighbour_help_network.ui.main.post.PostRequestFragment"
         android:label="Post" />

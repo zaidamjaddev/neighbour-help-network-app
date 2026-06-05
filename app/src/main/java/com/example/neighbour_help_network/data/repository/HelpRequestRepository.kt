@@ -72,11 +72,36 @@ class HelpRequestRepository {
             }
     }
 
-    suspend fun acceptRequest(requestId: String, userId: String): Result<Unit> = runCatching {
+    /**
+     * Listens to accepted requests involving the user (either requester or acceptor).
+     */
+    fun listenToAcceptedRequests(
+        userId: String,
+        onUpdate: (List<HelpRequest>) -> Unit
+    ): ListenerRegistration {
+        return collection
+            .whereEqualTo("status", "accepted")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("HelpRequestRepo", "Accepted Requests Error: ${error.message}")
+                    return@addSnapshotListener
+                }
+                if (snapshot == null) return@addSnapshotListener
+
+                val requests = snapshot.toObjects(HelpRequest::class.java)
+                    .filter { it.userId == userId || it.acceptedBy == userId }
+                    .sortedByDescending { it.timestamp?.time ?: System.currentTimeMillis() }
+
+                onUpdate(requests)
+            }
+    }
+
+    suspend fun acceptRequest(requestId: String, userId: String, userName: String): Result<Unit> = runCatching {
         collection.document(requestId).update(
             mapOf(
-                "status"     to "accepted",
-                "acceptedBy" to userId
+                "status"         to "accepted",
+                "acceptedBy"     to userId,
+                "acceptedByName" to userName
             )
         ).await()
     }

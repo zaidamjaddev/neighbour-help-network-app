@@ -7,9 +7,12 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.neighbour_help_network.R
 import com.example.neighbour_help_network.data.model.HelpRequest
@@ -19,7 +22,7 @@ import com.google.android.material.tabs.TabLayout
 
 /**
  * NearbyFeedFragment — Real-time scrolling feed of nearby help requests.
- * Now includes a toggle for Active vs History requests.
+ * Displays help requests and handles the transition to chat.
  */
 class NearbyFeedFragment : Fragment() {
 
@@ -40,9 +43,26 @@ class NearbyFeedFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        setupToolbar()
         setupRecyclerView()
         setupTabs()
         observeViewModel()
+    }
+
+    private fun setupToolbar() {
+        val navController = findNavController()
+        val appBarConfiguration = AppBarConfiguration(
+            setOf(
+                R.id.dashboardFragment,
+                R.id.nearbyFeedFragment,
+                R.id.acceptedRequestsFragment,
+                R.id.postRequestFragment,
+                R.id.liveChatFragment,
+                R.id.settingsFragment
+            ),
+            (activity as? AppCompatActivity)?.findViewById(R.id.drawerLayout)
+        )
+        binding.toolbarFeed.setupWithNavController(navController, appBarConfiguration)
     }
 
     private fun setupTabs() {
@@ -60,7 +80,16 @@ class NearbyFeedFragment : Fragment() {
 
     private fun setupRecyclerView() {
         adapter = HelpRequestAdapter(
-            onAcceptClicked = { request -> viewModel.acceptRequest(request.id) },
+            onAcceptClicked = { request -> 
+                viewModel.acceptRequest(request.id)
+                // Navigate to the Ongoing Help list first, then chat to ensure WhatsApp-like backstack
+                val bundle = Bundle().apply {
+                    putString("chatId", request.id)
+                    putString("chatTitle", "Chat: ${request.title}")
+                }
+                findNavController().navigate(R.id.acceptedRequestsFragment)
+                findNavController().navigate(R.id.requestChatFragment, bundle)
+            },
             onCompleteClicked = { request -> showCompleteConfirmation(request) },
             onChatClicked = { request -> openChat(request) },
             onEditClicked = { request -> showUpdateDialog(request) },
@@ -75,7 +104,6 @@ class NearbyFeedFragment : Fragment() {
             putString("chatId", request.id)
             putString("chatTitle", "Chat: ${request.title}")
         }
-        // Navigate to the NEW RequestChatFragment (not in bottom nav)
         findNavController().navigate(R.id.requestChatFragment, bundle)
     }
 
@@ -96,17 +124,8 @@ class NearbyFeedFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 24, 48, 0)
         }
-
-        val etTitle = EditText(context).apply {
-            hint = "Title"
-            setText(request.title)
-        }
-        val etDesc = EditText(context).apply {
-            hint = "Description"
-            setText(request.description)
-            minLines = 3
-        }
-
+        val etTitle = EditText(context).apply { hint = "Title"; setText(request.title) }
+        val etDesc = EditText(context).apply { hint = "Description"; setText(request.description); minLines = 3 }
         layout.addView(etTitle)
         layout.addView(etDesc)
 
@@ -127,25 +146,20 @@ class NearbyFeedFragment : Fragment() {
     private fun showDeleteConfirmation(request: HelpRequest) {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Delete Request")
-            .setMessage("Are you sure you want to delete this help request? This action cannot be undone.")
-            .setPositiveButton("Delete") { _, _ ->
-                viewModel.deleteRequest(request.id)
-            }
+            .setMessage("Are you sure you want to delete this help request?")
+            .setPositiveButton("Delete") { _, _ -> viewModel.deleteRequest(request.id) }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
     private fun observeViewModel() {
-        // Combined observer logic to prevent UI flickering and state mismatches
         viewModel.isLoading.observe(viewLifecycleOwner) { loading ->
             updateUiState(loading, viewModel.requests.value ?: emptyList())
         }
-
         viewModel.requests.observe(viewLifecycleOwner) { list ->
             adapter.submitList(list)
             updateUiState(viewModel.isLoading.value ?: false, list)
         }
-
         viewModel.actionResult.observe(viewLifecycleOwner) { result ->
             result ?: return@observe
             if (result.isFailure) {
@@ -165,13 +179,8 @@ class NearbyFeedFragment : Fragment() {
             if (list.isEmpty()) {
                 binding.layoutEmptyState.visibility = View.VISIBLE
                 binding.rvRequests.visibility = View.GONE
-                
                 val activeTab = binding.tabLayout.selectedTabPosition
-                binding.tvEmptyMessage.text = if (activeTab == 0) {
-                    getString(R.string.label_no_requests)
-                } else {
-                    "No completed requests found."
-                }
+                binding.tvEmptyMessage.text = if (activeTab == 0) getString(R.string.label_no_requests) else "No completed requests found."
             } else {
                 binding.layoutEmptyState.visibility = View.GONE
                 binding.rvRequests.visibility = View.VISIBLE

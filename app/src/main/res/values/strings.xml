@@ -31,7 +31,9 @@
     <string name="nav_settings">Settings</string>
 
     <!-- Dashboard -->
-    <string name="label_search_radius">Search Radius: %1$d km</string>
+    <string name="label_search_radius">Search Radius</string>
+    <string name="radius_km_format">%1$d km</string>
+    <string name="neighbours_in_radius">%1$d neighbours in radius</string>
     <string name="btn_sos_alert">SOS</string>
     <string name="sos_dialog_title">Send SOS Alert</string>
     <string name="sos_dialog_message">This will broadcast an emergency alert to all volunteers in your area. Continue?</string>
