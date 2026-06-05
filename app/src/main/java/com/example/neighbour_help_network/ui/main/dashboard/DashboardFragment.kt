@@ -5,6 +5,8 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Looper
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,7 +22,12 @@ import androidx.fragment.app.viewModels
 import com.example.neighbour_help_network.R
 import com.example.neighbour_help_network.data.model.User
 import com.example.neighbour_help_network.databinding.FragmentDashboardBinding
+import com.example.neighbour_help_network.service.NHNFcmService
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -34,7 +41,13 @@ import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 
 /**
- * DashboardFragment — Full-screen Google Map with radius SeekBar and SOS FAB.
+ * DashboardFragment — Full-screen Google Map with radius SeekBar, SOS FAB,
+ * and nearby-users count badge.
+ *
+ * Changes in this version:
+ *  - Observes nearbyHelpers instead of raw helpers → dots filtered by radius.
+ *  - Observes nearbyUsersCount → updates the badge TextView.
+ *  - Falls back to requestFreshLocation() if lastLocation is null (first boot / emulator).
  */
 class DashboardFragment : Fragment(), OnMapReadyCallback {
 
@@ -46,6 +59,7 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
     private var radiusCircle: Circle? = null
     private var currentLocation: LatLng? = null
     private val helperMarkers = mutableListOf<Marker>()
+    private var locationCallbackRef: LocationCallback? = null  // kept so we can remove it
 
     private val fusedLocationClient by lazy {
         LocationServices.getFusedLocationProviderClient(requireActivity())
@@ -72,8 +86,15 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Stop any pending location updates to prevent memory leaks
+        locationCallbackRef?.let { fusedLocationClient.removeLocationUpdates(it) }
+        locationCallbackRef = null
         _binding = null
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Map setup
+    // ─────────────────────────────────────────────────────────────────────────
 
     private fun setupMap() {
         val mapFragment = childFragmentManager
@@ -89,10 +110,10 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
             isMyLocationButtonEnabled = false
             isMapToolbarEnabled = true
         }
-        
-        // Push zoom controls and Google logo up so they aren't hidden by the radius card (approx 350px)
+
+        // Push zoom controls and Google logo up so they aren't hidden by the radius card (~400px)
         map.setPadding(0, 0, 0, 400)
-        
+
         requestLocationAndCenter()
     }
 
@@ -120,20 +141,69 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
         googleMap?.isMyLocationEnabled = true
         binding.tvMapStatusText.text = "📍 Location Active"
 
+        // Try cached location first (fast path)
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            location?.let {
-                val latlng = LatLng(it.latitude, it.longitude)
-                currentLocation = latlng
-                googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng, 14f))
-                googleMap?.addMarker(
-                    MarkerOptions()
-                        .position(latlng)
-                        .title("You are here")
-                )
-                drawRadiusCircle(latlng, (viewModel.radiusKm.value ?: 5) * 1000.0)
-                viewModel.updateUserLocation(it.latitude, it.longitude)
+            if (location != null) {
+                onLocationReceived(location.latitude, location.longitude)
+            } else {
+                // lastLocation is null on first boot / emulator — request a fresh fix
+                Log.d("Dashboard", "lastLocation null — requesting fresh fix")
+                requestFreshLocation()
+            }
+        }.addOnFailureListener {
+            Log.e("Dashboard", "lastLocation failed: ${it.message}")
+            requestFreshLocation()
+        }
+    }
+
+    /**
+     * Requests a single high-priority location fix from the OS.
+     * Used when lastLocation returns null (cold start, emulator, permissions just granted).
+     */
+    private fun requestFreshLocation() {
+        if (ActivityCompat.checkSelfPermission(
+                requireContext(), Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) return
+
+        val request = LocationRequest.Builder(
+            Priority.PRIORITY_HIGH_ACCURACY, 1000L
+        ).setMaxUpdates(1).build()  // single fix is enough
+
+        val callback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                result.lastLocation?.let { loc ->
+                    onLocationReceived(loc.latitude, loc.longitude)
+                }
+                // Remove callback after first fix to avoid battery drain
+                locationCallbackRef?.let { fusedLocationClient.removeLocationUpdates(it) }
+                locationCallbackRef = null
             }
         }
+        locationCallbackRef = callback
+        fusedLocationClient.requestLocationUpdates(request, callback, Looper.getMainLooper())
+    }
+
+    /**
+     * Common handler once we have a valid lat/lng — updates map UI, ViewModel, and
+     * starts local Firestore notification listeners for this position.
+     */
+    private fun onLocationReceived(lat: Double, lng: Double) {
+        if (!isAdded) return
+        val latlng = LatLng(lat, lng)
+        currentLocation = latlng
+        googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng, 14f))
+        googleMap?.addMarker(
+            MarkerOptions()
+                .position(latlng)
+                .title("You are here")
+        )
+        drawRadiusCircle(latlng, (viewModel.radiusKm.value ?: 5) * 1000.0)
+        // updateUserLocation saves to Firestore AND triggers radius filter
+        viewModel.updateUserLocation(lat, lng)
+        // Start local Firestore listeners so nearby-request notifications work
+        // without needing Firebase Cloud Functions (works on free Spark plan)
+        NHNFcmService.startLocalListeners(lat, lng, requireContext().applicationContext)
     }
 
     override fun onRequestPermissionsResult(
@@ -169,6 +239,10 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
         )
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Controls
+    // ─────────────────────────────────────────────────────────────────────────
+
     private fun setupSeekBar() {
         binding.seekbarRadius.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
@@ -196,8 +270,8 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
         val scaleNormX = ObjectAnimator.ofFloat(fab, "scaleX", 1.20f, 1f).setDuration(100)
         val scaleNormY = ObjectAnimator.ofFloat(fab, "scaleY", 1.20f, 1f).setDuration(100)
 
-        val bounceIn = AnimatorSet().apply { playTogether(scaleDownX, scaleDownY) }
-        val bounceOut = AnimatorSet().apply { playTogether(scaleUpX, scaleUpY) }
+        val bounceIn    = AnimatorSet().apply { playTogether(scaleDownX, scaleDownY) }
+        val bounceOut   = AnimatorSet().apply { playTogether(scaleUpX,   scaleUpY)   }
         val bounceSettle = AnimatorSet().apply { playTogether(scaleNormX, scaleNormY) }
 
         AnimatorSet().apply {
@@ -218,28 +292,52 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
             .show()
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Observers
+    // ─────────────────────────────────────────────────────────────────────────
+
     private fun observeViewModel() {
+        // Radius label + redraw circle
         viewModel.radiusKm.observe(viewLifecycleOwner) { km ->
             binding.tvRadiusLabel.text = "$km km"
             currentLocation?.let { drawRadiusCircle(it, km * 1000.0) }
         }
 
+        // SOS feedback
         viewModel.sosPosted.observe(viewLifecycleOwner) { posted ->
             if (posted == true) {
                 Toast.makeText(requireContext(), getString(R.string.sos_sent), Toast.LENGTH_LONG).show()
             }
         }
-
         viewModel.sosError.observe(viewLifecycleOwner) { msg ->
             if (!msg.isNullOrBlank()) {
                 Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
             }
         }
 
-        viewModel.helpers.observe(viewLifecycleOwner) { helpersList ->
+        // Nearby helpers (radius-filtered) → place dots on map
+        viewModel.nearbyHelpers.observe(viewLifecycleOwner) { helpersList ->
             updateHelperMarkers(helpersList)
         }
+
+        // Nearby count → update badge
+        // Label switches from "online" (no GPS yet) to "in radius" (GPS locked)
+        viewModel.nearbyUsersCount.observe(viewLifecycleOwner) { count ->
+            val hasGps = viewModel.currentLat != null
+            val label = when {
+                count == 0 -> "No neighbours nearby"
+                !hasGps   -> if (count == 1) "1 neighbour online" else "$count neighbours online"
+                count == 1 -> "1 neighbour in radius"
+                else       -> "$count neighbours in radius"
+            }
+            binding.tvNearbyUsersCount.text = label
+            binding.tvNearbyCountBadge.text = count.toString()
+        }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Map markers
+    // ─────────────────────────────────────────────────────────────────────────
 
     private fun updateHelperMarkers(helpersList: List<User>) {
         helperMarkers.forEach { it.remove() }
@@ -254,12 +352,12 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
                 val markerOptions = MarkerOptions()
                     .position(LatLng(lat, lng))
                     .title(helper.displayName)
-                    .snippet("Volunteer / Helper")
+                    .snippet("Volunteer / Helper — ${helper.neighborhood.ifBlank { "nearby" }}")
 
                 if (helperIcon != null) {
                     markerOptions.icon(helperIcon)
                 } else {
-                    markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+                    markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
                 }
 
                 googleMap?.addMarker(markerOptions)?.let { marker ->

@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users: authenticated users can read any profile, write only their own
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Help Requests: any authenticated user can read and create;
+    // only the owner or acceptor can update/delete
+    match /help_requests/{requestId} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null &&
+                       (resource.data.userId == request.auth.uid ||
+                        resource.data.acceptedBy == request.auth.uid);
+    }
+
+    // Notification triggers: any authenticated user can create (Android client);
+    // only Cloud Functions (via admin SDK) can delete
+    match /notification_triggers/{triggerId} {
+      allow create: if request.auth != null;
+      allow read:   if false;   // Only Cloud Functions read these
+      allow delete: if false;   // Only Cloud Functions delete these
+    }
+  }
+}

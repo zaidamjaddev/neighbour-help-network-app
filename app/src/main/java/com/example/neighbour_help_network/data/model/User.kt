@@ -12,5 +12,6 @@ data class User(
     val isVolunteer: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
     val latitude: Double? = null,
-    val longitude: Double? = null
+    val longitude: Double? = null,
+    val fcmToken: String = ""          // FCM device token — saved on login/token refresh
 )

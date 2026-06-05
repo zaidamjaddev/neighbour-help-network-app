@@ -2,6 +2,7 @@ package com.example.neighbour_help_network.ui.auth
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.util.Patterns
 import android.view.View
 import android.view.animation.AnimationUtils
@@ -9,8 +10,13 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.example.neighbour_help_network.R
+import com.example.neighbour_help_network.data.repository.AuthRepository
 import com.example.neighbour_help_network.databinding.ActivityAuthBinding
 import com.example.neighbour_help_network.ui.main.MainActivity
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * AuthActivity — Single-screen Login + Signup onboarding experience.
@@ -19,7 +25,7 @@ import com.example.neighbour_help_network.ui.main.MainActivity
  * Login and Signup layouts within a single card, with smooth fade animation.
  *
  * Observes AuthViewModel.authState for Loading / Success / Error transitions.
- * On Success: launches MainActivity and clears the back stack.
+ * On Success: saves FCM token to Firestore, then launches MainActivity.
  */
 class AuthActivity : AppCompatActivity() {
 
@@ -33,7 +39,7 @@ class AuthActivity : AppCompatActivity() {
 
         // If already signed in, go straight to MainActivity
         if (viewModel.currentUser != null) {
-            navigateToMain()
+            saveFcmTokenThenNavigate()
             return
         }
 
@@ -184,7 +190,7 @@ class AuthActivity : AppCompatActivity() {
                 }
                 is AuthViewModel.AuthState.Success -> {
                     setLoadingState(false)
-                    navigateToMain()
+                    saveFcmTokenThenNavigate()
                 }
                 is AuthViewModel.AuthState.Error -> {
                     setLoadingState(false)
@@ -202,8 +208,31 @@ class AuthActivity : AppCompatActivity() {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Navigation
+    // FCM Token + Navigation
     // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Fetches the current FCM registration token and saves it to Firestore
+     * so Cloud Functions can send targeted push notifications to this device.
+     * Navigates to MainActivity regardless of the token result.
+     */
+    private fun saveFcmTokenThenNavigate() {
+        FirebaseMessaging.getInstance().token
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val token = task.result
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            AuthRepository().saveFcmToken(token)
+                            Log.d("AuthActivity", "FCM token saved on login")
+                        } catch (e: Exception) {
+                            Log.e("AuthActivity", "FCM token save failed: ${e.message}")
+                        }
+                    }
+                }
+                navigateToMain()
+            }
+    }
 
     private fun navigateToMain() {
         startActivity(Intent(this, MainActivity::class.java))

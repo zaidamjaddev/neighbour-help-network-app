@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -85,6 +86,18 @@ class AuthRepository {
                 val volunteers = snapshot.toObjects(User::class.java)
                 onUpdate(volunteers)
             }
+    }
+
+    /**
+     * Persists the FCM device token for the currently signed-in user in Firestore.
+     * Uses set+merge so this never fails even on edge-case document states.
+     * Called after login, signup, and whenever FCM issues a new token.
+     */
+    suspend fun saveFcmToken(token: String): Result<Unit> = runCatching {
+        val uid = auth.currentUser?.uid ?: return@runCatching
+        usersCollection.document(uid)
+            .set(mapOf("fcmToken" to token), SetOptions.merge())
+            .await()
     }
 
     fun signOut() {
