@@ -1,32 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="176dp"
+    android:layout_height="200dp"
     android:background="@color/colorPrimary"
     android:gravity="bottom"
     android:orientation="vertical"
-    android:padding="16dp"
+    android:padding="20dp"
     android:theme="@style/ThemeOverlay.AppCompat.Dark">
 
+    <!-- User avatar (circular) -->
     <ImageView
-        android:id="@+id/imageView"
+        android:id="@+id/ivNavUserPhoto"
         android:layout_width="64dp"
         android:layout_height="64dp"
-        android:contentDescription="App Logo"
-        android:src="@drawable/ic_launcher_foreground" />
+        android:layout_marginBottom="10dp"
+        android:background="@drawable/bg_avatar_circle"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_person_placeholder"
+        android:contentDescription="User profile photo" />
 
     <TextView
+        android:id="@+id/tvNavUserName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="8dp"
         android:text="HoodHelp"
         android:textAppearance="@style/TextAppearance.AppCompat.Body1"
-        android:textStyle="bold" />
+        android:textStyle="bold"
+        android:textSize="15sp" />
 
     <TextView
         android:id="@+id/tvUserEmail"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="neighbor@hoodhelp.com" />
+        android:layout_marginTop="2dp"
+        android:alpha="0.85"
+        android:text="neighbor@hoodhelp.com"
+        android:textSize="13sp" />
 
 </LinearLayout>

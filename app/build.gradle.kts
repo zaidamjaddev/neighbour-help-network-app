@@ -62,6 +62,10 @@ dependencies {
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.messaging.ktx)
+    implementation(libs.firebase.storage.ktx)
+
+    // Glide image loading
+    implementation(libs.glide)
 
     // Google Maps & Location
     implementation(libs.play.services.maps)

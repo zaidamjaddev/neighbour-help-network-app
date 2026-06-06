@@ -1,21 +1,25 @@
 package com.example.neighbour_help_network.data.repository
 
+import android.net.Uri
 import com.example.neighbour_help_network.data.model.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.userProfileChangeRequest
+import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
+import android.util.Log
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
 
 /**
- * AuthRepository — Manages Firebase Auth and Firestore user profiles.
+ * AuthRepository — Manages Firebase Auth, Firestore user profiles, and Storage photo uploads.
  */
 class AuthRepository {
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val storage: FirebaseStorage = FirebaseStorage.getInstance()
     private val usersCollection = firestore.collection("users")
 
     val currentUser: FirebaseUser? get() = auth.currentUser
@@ -28,30 +32,57 @@ class AuthRepository {
         name: String,
         email: String,
         password: String,
-        phone: String
+        phone: String,
+        photoLocalPath: String? = null // optional local file path for profile image
     ): Result<FirebaseUser> = runCatching {
         val authResult = auth.createUserWithEmailAndPassword(email, password).await()
         val firebaseUser = authResult.user!!
 
-        // 1. Update Firebase Auth display name
-        val profileUpdates = userProfileChangeRequest {
-            displayName = name.trim()
-        }
+        val photoUrl = photoLocalPath ?: ""
+
+        // Update Firebase Auth display name
+        val profileUpdates = UserProfileChangeRequest.Builder()
+            .setDisplayName(name.trim())
+            .apply { if (photoUrl.isNotEmpty()) setPhotoUri(Uri.parse("file://" + photoUrl)) }
+            .build()
         firebaseUser.updateProfile(profileUpdates).await()
 
-        // 2. Persist user profile in Firestore
+        // Persist user profile in Firestore
         val userProfile = User(
             uid = firebaseUser.uid,
             displayName = name.trim(),
             email = email.trim().lowercase(),
             phone = phone.trim(),
             isVolunteer = true,
-            createdAt = System.currentTimeMillis()
+            createdAt = System.currentTimeMillis(),
+            photoUrl = photoUrl
         )
         usersCollection.document(firebaseUser.uid).set(userProfile).await()
 
         firebaseUser
     }
+
+    // IMAGE UPLOAD DISABLED
+    // suspend fun uploadProfilePhoto(uid: String, imageBytes: ByteArray): Result<String> = runCatching {
+    //     Log.d("AuthRepository", "Starting uploadProfilePhoto for uid: $uid")
+    //     val ref = storage.reference.child("profilePhotos/$uid.jpg")
+    //     ref.putBytes(imageBytes).await()
+    //     val url = ref.downloadUrl.await().toString()
+    //     Log.d("AuthRepository", "uploadProfilePhoto success: $url")
+    //     url
+    // }.onFailure {
+    //     Log.e("AuthRepository", "uploadProfilePhoto failed", it)
+    // }
+
+    // IMAGE UPLOAD DISABLED
+    // suspend fun updateProfilePhoto(imageBytes: ByteArray): Result<String> = runCatching {
+    //     val uid = auth.currentUser?.uid ?: throw Exception("Not authenticated")
+    //     val url = uploadProfilePhoto(uid, imageBytes).getOrThrow()
+    //     val profileUpdates = UserProfileChangeRequest.Builder().setPhotoUri(Uri.parse(url)).build()
+    //     auth.currentUser?.updateProfile(profileUpdates)?.await()
+    //     usersCollection.document(uid).set(mapOf("photoUrl" to url), SetOptions.merge()).await()
+    //     url
+    // }
 
     suspend fun getUserProfile(): Result<User?> = runCatching {
         val uid = auth.currentUser?.uid ?: throw Exception("Not authenticated")
@@ -60,15 +91,39 @@ class AuthRepository {
 
     suspend fun updateUserProfile(updates: Map<String, Any>): Result<Unit> = runCatching {
         val uid = auth.currentUser?.uid ?: throw Exception("Not authenticated")
-        
+
         // If name is being updated, sync with FirebaseAuth too
         updates["displayName"]?.let { newName ->
-            auth.currentUser?.updateProfile(userProfileChangeRequest {
-                displayName = newName.toString()
-            })?.await()
+            val profileUpdates = UserProfileChangeRequest.Builder()
+                .setDisplayName(newName.toString())
+                .build()
+            auth.currentUser?.updateProfile(profileUpdates)?.await()
         }
 
         usersCollection.document(uid).update(updates).await()
+    }
+
+    /**
+     * Update the user document's photoUrl with a local file path (no Firebase Storage used).
+     * Returns the stored path on success.
+     */
+    suspend fun updateLocalProfilePhoto(localPath: String): Result<String> = runCatching {
+        val uid = auth.currentUser?.uid ?: throw Exception("Not authenticated")
+        // Store the path in Firestore so other clients read it.
+        usersCollection.document(uid).set(mapOf("photoUrl" to localPath), SetOptions.merge()).await()
+
+        // Optionally update FirebaseAuth photoUri (stores the same URI string). Not required for usage.
+        try {
+            val profileUpdates = UserProfileChangeRequest.Builder()
+                .setPhotoUri(Uri.parse("file://" + localPath))
+                .build()
+            auth.currentUser?.updateProfile(profileUpdates)?.await()
+        } catch (e: Exception) {
+            // Non-fatal — we still return success since Firestore write succeeded.
+            Log.w("AuthRepository", "Failed to update auth photoUri: ${e.message}")
+        }
+
+        localPath
     }
 
     fun listenToVolunteers(
@@ -91,7 +146,6 @@ class AuthRepository {
     /**
      * Persists the FCM device token for the currently signed-in user in Firestore.
      * Uses set+merge so this never fails even on edge-case document states.
-     * Called after login, signup, and whenever FCM issues a new token.
      */
     suspend fun saveFcmToken(token: String): Result<Unit> = runCatching {
         val uid = auth.currentUser?.uid ?: return@runCatching

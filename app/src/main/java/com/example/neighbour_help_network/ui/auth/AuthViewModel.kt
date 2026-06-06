@@ -1,5 +1,6 @@
 package com.example.neighbour_help_network.ui.auth
 
+import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -42,12 +43,13 @@ class AuthViewModel : ViewModel() {
 
     /**
      * Creates a new account and writes the profile to Firestore.
+     * Optionally uploads a profile photo to Firebase Storage.
      * Posts Loading → Success | Error to [authState].
      */
-    fun signup(name: String, email: String, password: String, phone: String) {
+    fun signup(name: String, email: String, password: String, phone: String, photoLocalPath: String? = null) {
         _authState.value = AuthState.Loading
         viewModelScope.launch {
-            val result = repository.signup(name, email, password, phone)
+            val result = repository.signup(name, email, password, phone, photoLocalPath)
             _authState.value = if (result.isSuccess) {
                 AuthState.Success(result.getOrThrow())
             } else {

@@ -90,7 +90,11 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             enableMapLocation()
         } else {
-            requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1001)
+            ActivityCompat.requestPermissions(
+                requireActivity(),
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                1001
+            )
         }
     }
 
@@ -121,6 +125,8 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
         drawRadiusCircle(latlng, (viewModel.radiusKm.value ?: 5) * 1000.0)
         viewModel.updateUserLocation(lat, lng)
         NHNFcmService.startLocalListeners(lat, lng, requireContext().applicationContext)
+        
+        binding.tvMapStatusText.text = "Location Active"
     }
 
     private fun drawRadiusCircle(center: LatLng, radiusMeters: Double) {

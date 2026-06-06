@@ -9,6 +9,11 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.neighbour_help_network.databinding.FragmentLiveChatBinding
+import androidx.appcompat.app.AppCompatActivity
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.setupWithNavController
+import com.example.neighbour_help_network.R
 
 /**
  * LiveChatFragment — Real-time community chat screen (Global Chat).
@@ -37,12 +42,29 @@ class LiveChatFragment : Fragment() {
         // Always global chat for this fragment
         val chatId = "global_chat"
         
+        setupToolbar()
         setupRecyclerView()
         setupSendButton()
         setupTranslateButton()
         observeViewModel()
 
         viewModel.startListening(chatId)
+    }
+
+    private fun setupToolbar() {
+        val navController = findNavController()
+        val appBarConfiguration = AppBarConfiguration(
+            setOf(
+                R.id.dashboardFragment,
+                R.id.nearbyFeedFragment,
+                R.id.acceptedRequestsFragment,
+                R.id.postRequestFragment,
+                R.id.liveChatFragment,
+                R.id.settingsFragment
+            ),
+            (activity as? AppCompatActivity)?.findViewById(R.id.drawerLayout)
+        )
+        binding.toolbarChat.setupWithNavController(navController, appBarConfiguration)
     }
 
     override fun onDestroyView() {

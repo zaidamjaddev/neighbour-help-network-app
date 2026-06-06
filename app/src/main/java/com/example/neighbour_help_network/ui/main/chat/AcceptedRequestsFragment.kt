@@ -10,7 +10,9 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.neighbour_help_network.R
 import com.example.neighbour_help_network.databinding.FragmentAcceptedRequestsBinding
-
+import androidx.appcompat.app.AppCompatActivity
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.setupWithNavController
 /**
  * AcceptedRequestsFragment — Shows a list of ongoing help chats (WhatsApp-style).
  */
@@ -32,8 +34,25 @@ class AcceptedRequestsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        setupToolbar()
         setupRecyclerView()
         observeViewModel()
+    }
+
+    private fun setupToolbar() {
+        val navController = findNavController()
+        val appBarConfiguration = AppBarConfiguration(
+            setOf(
+                R.id.dashboardFragment,
+                R.id.nearbyFeedFragment,
+                R.id.acceptedRequestsFragment,
+                R.id.postRequestFragment,
+                R.id.liveChatFragment,
+                R.id.settingsFragment
+            ),
+            (activity as? AppCompatActivity)?.findViewById(R.id.drawerLayout)
+        )
+        binding.toolbarAccepted.setupWithNavController(navController, appBarConfiguration)
     }
 
     private fun setupRecyclerView() {

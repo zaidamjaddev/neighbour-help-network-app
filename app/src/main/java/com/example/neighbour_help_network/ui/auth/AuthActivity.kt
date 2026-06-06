@@ -1,18 +1,22 @@
 package com.example.neighbour_help_network.ui.auth
 
 import android.content.Intent
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.util.Patterns
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.example.neighbour_help_network.R
 import com.example.neighbour_help_network.data.repository.AuthRepository
 import com.example.neighbour_help_network.databinding.ActivityAuthBinding
 import com.example.neighbour_help_network.ui.main.MainActivity
+// IMAGE UPLOAD DISABLED: import com.example.neighbour_help_network.utils.ImageUtils
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +36,30 @@ class AuthActivity : AppCompatActivity() {
     private lateinit var binding: ActivityAuthBinding
     private val viewModel: AuthViewModel by viewModels()
 
+    // IMAGE UPLOAD DISABLED
+    // private var selectedPhotoBytes: ByteArray? = null
+    private var selectedPhotoLocalPath: String? = null
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val bytes = com.example.neighbour_help_network.utils.ImageUtils.compressImageFromUri(this, uri)
+            if (bytes != null) {
+                // Save locally and display
+                val filename = "signup_${System.currentTimeMillis()}.jpg"
+                val savedPath = com.example.neighbour_help_network.utils.ImageUtils.saveProfileImage(this, filename, bytes)
+                if (savedPath != null) {
+                    selectedPhotoLocalPath = savedPath
+                    binding.ivSignupAvatar.setImageBitmap(BitmapFactory.decodeFile(savedPath))
+                } else {
+                    Toast.makeText(this, "Failed to save image. Please try another.", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Failed to read image. Please try another.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAuthBinding.inflate(layoutInflater)
@@ -46,6 +74,7 @@ class AuthActivity : AppCompatActivity() {
         setupTabToggle()
         setupLoginButton()
         setupSignupButton()
+        setupAvatarPicker()
         observeAuthState()
     }
 
@@ -72,6 +101,16 @@ class AuthActivity : AppCompatActivity() {
                     binding.layoutLogin.visibility = View.GONE
                 }
             }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Avatar Picker — IMAGE UPLOAD DISABLED
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun setupAvatarPicker() {
+        binding.flAvatarPicker.setOnClickListener {
+            pickImageLauncher.launch("image/*")
         }
     }
 
@@ -130,7 +169,7 @@ class AuthActivity : AppCompatActivity() {
 
             if (!validateSignupFields(name, email, phone, password, confirmPassword)) return@setOnClickListener
 
-            viewModel.signup(name, email, password, phone)
+            viewModel.signup(name, email, password, phone, selectedPhotoLocalPath)
         }
     }
 
@@ -205,6 +244,7 @@ class AuthActivity : AppCompatActivity() {
         binding.btnLogin.isEnabled = !loading
         binding.btnSignup.isEnabled = !loading
         binding.toggleGroup.isEnabled = !loading
+        binding.flAvatarPicker.isEnabled = !loading
     }
 
     // ─────────────────────────────────────────────────────────────────────────

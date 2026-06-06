@@ -185,6 +185,54 @@
                     android:orientation="vertical"
                     android:visibility="gone">
 
+                    <FrameLayout
+                        android:id="@+id/flAvatarPicker"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginBottom="4dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:visibility="visible">
+
+                        <!-- Circle avatar preview -->
+                        <ImageView
+                            android:id="@+id/ivSignupAvatar"
+                            android:layout_width="96dp"
+                            android:layout_height="96dp"
+                            android:background="@drawable/bg_avatar_circle"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/ic_person_placeholder"
+                            android:contentDescription="Profile photo" />
+
+                        <!-- Camera badge overlay -->
+                        <FrameLayout
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
+                            android:layout_gravity="bottom|end"
+                            android:background="@color/colorPrimary"
+                            android:padding="6dp">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:src="@android:drawable/ic_menu_camera"
+                                android:contentDescription="Change photo"
+                                app:tint="@color/colorTextOnDark" />
+                        </FrameLayout>
+
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginBottom="20dp"
+                        android:text="Tap to add a photo (optional)"
+                        android:textColor="@color/colorTextSecondary"
+                        android:textSize="12sp"
+                        android:visibility="visible" />
+
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/tilSignupName"
                         style="@style/Widget.NHN.TextInputLayout"

@@ -17,5 +17,6 @@ data class User(
     val createdAt: Long = System.currentTimeMillis(),
     val latitude: Double? = null,
     val longitude: Double? = null,
-    val fcmToken: String = ""
+    val fcmToken: String = "",
+    val photoUrl: String = ""
 )

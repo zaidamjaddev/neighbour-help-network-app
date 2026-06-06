@@ -16,6 +16,10 @@ import com.example.neighbour_help_network.data.local.LocalAiEngine
 import com.example.neighbour_help_network.databinding.FragmentPostRequestBinding
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.chip.Chip
+import androidx.appcompat.app.AppCompatActivity
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.setupWithNavController
 
 /**
  * PostRequestFragment — Multi-step form for posting a help request.
@@ -41,9 +45,26 @@ class PostRequestFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        setupToolbar()
         setupAnalyzeButton()
         setupSubmitButton()
         observeViewModel()
+    }
+
+    private fun setupToolbar() {
+        val navController = findNavController()
+        val appBarConfiguration = AppBarConfiguration(
+            setOf(
+                R.id.dashboardFragment,
+                R.id.nearbyFeedFragment,
+                R.id.acceptedRequestsFragment,
+                R.id.postRequestFragment,
+                R.id.liveChatFragment,
+                R.id.settingsFragment
+            ),
+            (activity as? AppCompatActivity)?.findViewById(R.id.drawerLayout)
+        )
+        binding.toolbarPost.setupWithNavController(navController, appBarConfiguration)
     }
 
     private fun setupAnalyzeButton() {
