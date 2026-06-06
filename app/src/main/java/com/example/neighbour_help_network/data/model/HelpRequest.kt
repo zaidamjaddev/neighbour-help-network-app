@@ -19,6 +19,7 @@ data class HelpRequest(
     val urgencyScore: Int = 20,
     val urgencyLevel: String = "LOW URGENCY",
     val tags: List<String> = emptyList(),
+    val imagePath: String = "",
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
     val status: String = "open",        // "open" | "accepted" | "resolved"

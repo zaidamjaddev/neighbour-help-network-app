@@ -18,7 +18,6 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
-import androidx.navigation.ui.setupWithNavController
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.CircleCrop
 import com.bumptech.glide.request.RequestOptions
@@ -83,7 +82,24 @@ class MainActivity : AppCompatActivity() {
             binding.drawerLayout
         )
 
-        binding.navigationView.setupWithNavController(navController)
+        binding.navigationView.setNavigationItemSelectedListener { menuItem ->
+            val handled = when (menuItem.itemId) {
+                R.id.dashboardFragment,
+                R.id.nearbyFeedFragment,
+                R.id.acceptedRequestsFragment,
+                R.id.postRequestFragment,
+                R.id.liveChatFragment,
+                R.id.settingsFragment -> {
+                    binding.drawerLayout.closeDrawer(GravityCompat.START)
+                    if (navController.currentDestination?.id != menuItem.itemId) {
+                        navController.navigate(menuItem.itemId)
+                    }
+                    true
+                }
+                else -> false
+            }
+            handled
+        }
     }
 
     /**

@@ -55,7 +55,9 @@ class AuthRepository {
             phone = phone.trim(),
             isVolunteer = true,
             createdAt = System.currentTimeMillis(),
-            photoUrl = photoUrl
+            photoUrl = photoUrl,
+            totalPoints = 0,
+            resolvedRequests = 0
         )
         usersCollection.document(firebaseUser.uid).set(userProfile).await()
 
@@ -101,6 +103,32 @@ class AuthRepository {
         }
 
         usersCollection.document(uid).update(updates).await()
+    }
+
+    suspend fun awardUserPoints(userId: String, points: Int): Result<Unit> = runCatching {
+        if (points <= 0) return@runCatching
+        usersCollection.document(userId)
+            .set(
+                mapOf(
+                    "totalPoints" to com.google.firebase.firestore.FieldValue.increment(points.toLong()),
+                    "resolvedRequests" to com.google.firebase.firestore.FieldValue.increment(1L)
+                ),
+                SetOptions.merge()
+            )
+            .await()
+    }
+
+    suspend fun incrementRequesterResolvedCount(userId: String, points: Int): Result<Unit> = runCatching {
+        if (points <= 0) return@runCatching
+        usersCollection.document(userId)
+            .set(
+                mapOf(
+                    "totalPoints" to com.google.firebase.firestore.FieldValue.increment(points.toLong()),
+                    "resolvedRequests" to com.google.firebase.firestore.FieldValue.increment(1L)
+                ),
+                SetOptions.merge()
+            )
+            .await()
     }
 
     /**

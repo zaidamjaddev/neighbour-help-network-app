@@ -21,10 +21,15 @@ class PostRequestViewModel : ViewModel() {
     val aiResult = MutableLiveData<LocalAiEngine.AiAnalysisResult?>()
     val submitResult = MutableLiveData<Result<String>?>()
     val isLoading = MutableLiveData<Boolean>(false)
+    val requestImagePath = MutableLiveData<String?>(null)
 
     fun analyzeDescription(description: String) {
         val result = LocalAiEngine.analyzeHelpDescription(description)
         aiResult.value = result
+    }
+
+    fun setRequestImagePath(path: String?) {
+        requestImagePath.value = path
     }
 
     fun submitRequest(
@@ -58,6 +63,7 @@ class PostRequestViewModel : ViewModel() {
                     urgencyScore = analysis.urgencyScore,
                     urgencyLevel = analysis.urgencyLevel,
                     tags = analysis.automatedTags,
+                    imagePath = requestImagePath.value.orEmpty(),
                     latitude = latitude,
                     longitude = longitude,
                     status = "open"

@@ -61,6 +61,7 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
         setupSosFab()
         observeViewModel()
         viewModel.startListeningToHelpers()
+        viewModel.startListeningToKarma()
     }
 
     private fun setupToolbar() {
@@ -165,6 +166,14 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
         viewModel.nearbyUsersCount.observe(viewLifecycleOwner) { count ->
             binding.tvNearbyUsersCount.text = getString(R.string.neighbours_in_radius, count)
             binding.tvNearbyCountBadge.text = count.toString()
+        }
+
+        viewModel.helpPoints.observe(viewLifecycleOwner) { points ->
+            binding.tvKarmaPoints.text = points.toString()
+        }
+
+        viewModel.helpBadge.observe(viewLifecycleOwner) { badge ->
+            binding.tvHelpBadge.text = badge
         }
     }
 

@@ -18,5 +18,7 @@ data class User(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val fcmToken: String = "",
-    val photoUrl: String = ""
+    val photoUrl: String = "",
+    val totalPoints: Int = 0,
+    val resolvedRequests: Int = 0
 )

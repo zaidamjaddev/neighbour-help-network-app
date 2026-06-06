@@ -84,6 +84,17 @@
             android:textSize="14sp"
             android:lineSpacingExtra="3dp" />
 
+        <ImageView
+            android:id="@+id/ivRequestImage"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_avatar_circle"
+            android:contentDescription="Request image"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_person_placeholder"
+            android:visibility="gone" />
+
         <!-- Divider -->
         <View
             android:layout_width="match_parent"

@@ -3,9 +3,11 @@ package com.example.neighbour_help_network.ui.main.feed
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import java.io.File
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.neighbour_help_network.R
 import com.example.neighbour_help_network.data.model.HelpRequest
 import com.example.neighbour_help_network.databinding.ItemHelpRequestBinding
@@ -39,6 +41,26 @@ class HelpRequestAdapter(
 
                 // Distance placeholder
                 tvDistance.text = "Nearby"
+
+                val imagePath = request.imagePath.trim()
+                if (imagePath.isNotBlank()) {
+                    val file = File(imagePath)
+                    if (file.exists()) {
+                        ivRequestImage.visibility = View.VISIBLE
+                        Glide.with(itemView)
+                            .load(file)
+                            .centerCrop()
+                            .placeholder(R.drawable.ic_person_placeholder)
+                            .error(R.drawable.ic_person_placeholder)
+                            .into(ivRequestImage)
+                    } else {
+                        ivRequestImage.visibility = View.GONE
+                        Glide.with(itemView).clear(ivRequestImage)
+                    }
+                } else {
+                    ivRequestImage.visibility = View.GONE
+                    Glide.with(itemView).clear(ivRequestImage)
+                }
 
                 // Urgency level color coding
                 val context = itemView.context

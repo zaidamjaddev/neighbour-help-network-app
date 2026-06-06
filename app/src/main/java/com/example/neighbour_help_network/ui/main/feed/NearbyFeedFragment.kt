@@ -19,6 +19,7 @@ import com.example.neighbour_help_network.data.model.HelpRequest
 import com.example.neighbour_help_network.databinding.FragmentNearbyFeedBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
+import com.google.android.material.snackbar.Snackbar
 
 /**
  * NearbyFeedFragment — Real-time scrolling feed of nearby help requests.
@@ -82,13 +83,10 @@ class NearbyFeedFragment : Fragment() {
         adapter = HelpRequestAdapter(
             onAcceptClicked = { request -> 
                 viewModel.acceptRequest(request.id)
-                // Navigate to the Ongoing Help list first, then chat to ensure WhatsApp-like backstack
-                val bundle = Bundle().apply {
-                    putString("chatId", request.id)
-                    putString("chatTitle", "Chat: ${request.title}")
+                val navController = findNavController()
+                if (navController.currentDestination?.id == R.id.nearbyFeedFragment) {
+                    Snackbar.make(binding.root, "Accepted. Open it from My Ongoing Help to start chat.", Snackbar.LENGTH_SHORT).show()
                 }
-                findNavController().navigate(R.id.acceptedRequestsFragment)
-                findNavController().navigate(R.id.requestChatFragment, bundle)
             },
             onCompleteClicked = { request -> showCompleteConfirmation(request) },
             onChatClicked = { request -> openChat(request) },

@@ -3,17 +3,21 @@ package com.example.neighbour_help_network.ui.main.post
 import android.Manifest
 import android.animation.ObjectAnimator
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.example.neighbour_help_network.R
 import com.example.neighbour_help_network.data.local.LocalAiEngine
 import com.example.neighbour_help_network.databinding.FragmentPostRequestBinding
+import com.example.neighbour_help_network.utils.ImageUtils
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.chip.Chip
 import androidx.appcompat.app.AppCompatActivity
@@ -34,6 +38,30 @@ class PostRequestFragment : Fragment() {
         LocationServices.getFusedLocationProviderClient(requireActivity())
     }
 
+    private var selectedRequestImagePath: String? = null
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri == null) return@registerForActivityResult
+
+        val bytes = ImageUtils.compressImageFromUri(requireContext(), uri)
+        if (bytes == null) {
+            Toast.makeText(requireContext(), "Failed to read image", Toast.LENGTH_SHORT).show()
+            return@registerForActivityResult
+        }
+
+        val filename = "request_${System.currentTimeMillis()}.jpg"
+        val savedPath = ImageUtils.saveProfileImage(requireContext(), filename, bytes)
+        if (savedPath != null) {
+            selectedRequestImagePath = savedPath
+            viewModel.setRequestImagePath(savedPath)
+            binding.ivRequestPreview.setImageBitmap(BitmapFactory.decodeFile(savedPath))
+            binding.layoutRequestImagePreview.visibility = View.VISIBLE
+        } else {
+            Toast.makeText(requireContext(), "Failed to save image", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -46,9 +74,23 @@ class PostRequestFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupToolbar()
+        setupImagePicker()
         setupAnalyzeButton()
         setupSubmitButton()
         observeViewModel()
+    }
+
+    private fun setupImagePicker() {
+        binding.btnAddRequestImage.setOnClickListener {
+            pickImageLauncher.launch("image/*")
+        }
+
+        binding.btnRemoveRequestImage.setOnClickListener {
+            selectedRequestImagePath = null
+            viewModel.setRequestImagePath(null)
+            binding.layoutRequestImagePreview.visibility = View.GONE
+            binding.ivRequestPreview.setImageDrawable(null)
+        }
     }
 
     private fun setupToolbar() {
@@ -99,6 +141,8 @@ class PostRequestFragment : Fragment() {
             }
 
             if (!isValid) return@setOnClickListener
+
+            viewModel.setRequestImagePath(selectedRequestImagePath)
 
             // Get location before submitting
             if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {

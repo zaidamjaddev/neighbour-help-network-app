@@ -38,11 +38,16 @@ class DashboardViewModel : ViewModel() {
     /** Count of volunteers within radius — drives the badge. */
     val nearbyUsersCount = MutableLiveData<Int>(0)
 
+    /** Karma score for the current user — based on resolved requests. */
+    val helpPoints = MutableLiveData<Int>(0)
+    val helpBadge = MutableLiveData<String>("New Helper")
+
     /** Current device location — updated once GPS fix arrives. */
     var currentLat: Double? = null
     var currentLng: Double? = null
 
     private var helpersRegistration: ListenerRegistration? = null
+    private var karmaRegistration: ListenerRegistration? = null
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -163,6 +168,35 @@ class DashboardViewModel : ViewModel() {
         )
     }
 
+    fun startListeningToKarma() {
+        karmaRegistration?.remove()
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        viewModelScope.launch {
+            authRepository.getUserProfile().getOrNull()?.let { user ->
+                helpPoints.postValue(user.totalPoints)
+                helpBadge.postValue(resolveBadge(user.totalPoints))
+            }
+        }
+
+        karmaRegistration = authRepository.listenToVolunteers(
+            onUpdate = { list ->
+                list.firstOrNull { it.uid == userId }?.let { user ->
+                    helpPoints.postValue(user.totalPoints)
+                    helpBadge.postValue(resolveBadge(user.totalPoints))
+                }
+            },
+            onError = { }
+        )
+    }
+
+    private fun resolveBadge(points: Int): String {
+        return when {
+            points >= 100 -> "Top Neighbour"
+            points >= 30 -> "Trusted Helper"
+            else -> "New Helper"
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Haversine distance formula
     // ─────────────────────────────────────────────────────────────────────────
@@ -187,5 +221,6 @@ class DashboardViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         helpersRegistration?.remove()
+        karmaRegistration?.remove()
     }
 }

@@ -2,9 +2,11 @@ package com.example.neighbour_help_network.data.repository
 
 import android.util.Log
 import com.example.neighbour_help_network.data.model.HelpRequest
+import com.example.neighbour_help_network.data.repository.AuthRepository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -14,9 +16,34 @@ class HelpRequestRepository {
 
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
     private val collection = firestore.collection("help_requests")
+    private val authRepository = AuthRepository()
 
     suspend fun postRequest(request: HelpRequest): Result<String> = runCatching {
         collection.add(request).await().id
+    }
+
+    /**
+     * Returns a realtime count of requests the user has completed/resolved.
+     * This is used as the user's karma score.
+     */
+    fun listenToUserKarma(
+        userId: String,
+        onUpdate: (Int) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return collection
+            .whereEqualTo("status", "resolved")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error)
+                    return@addSnapshotListener
+                }
+                val count = snapshot?.documents?.count {
+                    val request = it.toObject(HelpRequest::class.java)
+                    request?.acceptedBy == userId || request?.userId == userId
+                } ?: 0
+                onUpdate(count)
+            }
     }
 
     /**
@@ -107,7 +134,35 @@ class HelpRequestRepository {
     }
 
     suspend fun completeRequest(requestId: String): Result<Unit> = runCatching {
-        collection.document(requestId).update("status", "resolved").await()
+        val docRef = collection.document(requestId)
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(docRef)
+            val request = snapshot.toObject(HelpRequest::class.java)
+                ?: throw IllegalStateException("Request not found")
+
+            transaction.update(docRef, "status", "resolved")
+            request.acceptedBy.takeIf { it.isNotBlank() }?.let { helperId ->
+                transaction.set(
+                    firestore.collection("users").document(helperId),
+                    mapOf(
+                        "totalPoints" to com.google.firebase.firestore.FieldValue.increment(5L),
+                        "resolvedRequests" to com.google.firebase.firestore.FieldValue.increment(1L)
+                    ),
+                    SetOptions.merge()
+                )
+            }
+            request.userId.takeIf { it.isNotBlank() }?.let { requesterId ->
+                transaction.set(
+                    firestore.collection("users").document(requesterId),
+                    mapOf(
+                        "totalPoints" to com.google.firebase.firestore.FieldValue.increment(2L),
+                        "resolvedRequests" to com.google.firebase.firestore.FieldValue.increment(1L)
+                    ),
+                    SetOptions.merge()
+                )
+            }
+            null
+        }.await()
     }
 
     suspend fun deleteRequest(requestId: String): Result<Unit> = runCatching {
