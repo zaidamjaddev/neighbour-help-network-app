@@ -93,4 +93,14 @@
     <string name="label_account_settings">Account</string>
     <string name="label_notifications">Notifications</string>
     <string name="label_privacy_policy">Privacy Policy</string>
+
+    <!-- Email Verification Screen -->
+    <string name="title_email_verification">Verify Your Email</string>
+    <string name="desc_email_verification">We have sent a verification link to:\n<b>%1$s</b>\n\nPlease check your email inbox (and spam folder) and click the link to activate your account.</string>
+    <string name="btn_check_verification_status">Check Verification Status</string>
+    <string name="btn_resend_verification_email">Resend Verification Email</string>
+    <string name="btn_back_to_login">Back to Login</string>
+    <string name="msg_verification_email_sent">Verification email sent successfully!</string>
+    <string name="msg_please_verify_email">Email not verified yet. Please check your inbox.</string>
+    <string name="msg_cooldown_active">Please wait a few seconds before resending.</string>
 </resources>

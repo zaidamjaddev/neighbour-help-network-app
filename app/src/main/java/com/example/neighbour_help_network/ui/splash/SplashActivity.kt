@@ -8,6 +8,7 @@ import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
 import com.example.neighbour_help_network.databinding.ActivitySplashBinding
 import com.example.neighbour_help_network.ui.auth.AuthActivity
+import com.example.neighbour_help_network.ui.auth.EmailVerificationActivity
 import com.example.neighbour_help_network.ui.main.MainActivity
 import com.google.firebase.auth.FirebaseAuth
 
@@ -30,8 +31,13 @@ class SplashActivity : AppCompatActivity() {
     private fun checkAuthState() {
         val user = FirebaseAuth.getInstance().currentUser
         if (user != null) {
-            // User is signed in, go to MainActivity
-            startActivity(Intent(this, MainActivity::class.java))
+            if (user.isEmailVerified) {
+                // User is signed in and email is verified, go to MainActivity
+                startActivity(Intent(this, MainActivity::class.java))
+            } else {
+                // User is signed in but email is not verified, go to EmailVerificationActivity
+                startActivity(Intent(this, EmailVerificationActivity::class.java))
+            }
         } else {
             // No user is signed in, go to AuthActivity
             startActivity(Intent(this, AuthActivity::class.java))

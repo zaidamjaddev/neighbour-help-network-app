@@ -49,6 +49,11 @@
             android:exported="false"
             android:windowSoftInputMode="adjustPan|stateVisible" />
 
+        <!-- Email Verification Activity -->
+        <activity
+            android:name=".ui.auth.EmailVerificationActivity"
+            android:exported="false" />
+
         <!-- Main Activity (Single-Activity host) -->
         <activity
             android:name=".ui.main.MainActivity"

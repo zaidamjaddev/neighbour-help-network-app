@@ -270,12 +270,17 @@ class AuthActivity : AppCompatActivity() {
                         }
                     }
                 }
-                navigateToMain()
+                navigateToNextScreen()
             }
     }
 
-    private fun navigateToMain() {
-        startActivity(Intent(this, MainActivity::class.java))
+    private fun navigateToNextScreen() {
+        val user = viewModel.currentUser
+        if (user != null && !user.isEmailVerified) {
+            startActivity(Intent(this, EmailVerificationActivity::class.java))
+        } else {
+            startActivity(Intent(this, MainActivity::class.java))
+        }
         finish()
     }
 }

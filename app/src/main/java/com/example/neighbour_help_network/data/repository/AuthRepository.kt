@@ -24,6 +24,19 @@ class AuthRepository {
 
     val currentUser: FirebaseUser? get() = auth.currentUser
 
+    val isEmailVerified: Boolean get() = auth.currentUser?.isEmailVerified ?: false
+
+    suspend fun sendEmailVerification(): Result<Unit> = runCatching {
+        val user = auth.currentUser ?: throw Exception("No user is signed in.")
+        user.sendEmailVerification().await()
+    }
+
+    suspend fun reloadUser(): Result<FirebaseUser?> = runCatching {
+        val user = auth.currentUser ?: return@runCatching null
+        user.reload().await()
+        auth.currentUser
+    }
+
     suspend fun login(email: String, password: String): Result<FirebaseUser> = runCatching {
         auth.signInWithEmailAndPassword(email, password).await().user!!
     }
@@ -46,6 +59,9 @@ class AuthRepository {
             .apply { if (photoUrl.isNotEmpty()) setPhotoUri(Uri.parse("file://" + photoUrl)) }
             .build()
         firebaseUser.updateProfile(profileUpdates).await()
+
+        // Send email verification link
+        firebaseUser.sendEmailVerification().await()
 
         // Persist user profile in Firestore
         val userProfile = User(
