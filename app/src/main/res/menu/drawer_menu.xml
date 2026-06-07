@@ -10,6 +10,10 @@
             android:icon="@drawable/ic_feed"
             android:title="Nearby Feed" />
         <item
+            android:id="@+id/leaderboardFragment"
+            android:icon="@drawable/ic_helper"
+            android:title="Top Neighbours" />
+        <item
             android:id="@+id/acceptedRequestsFragment"
             android:icon="@drawable/ic_chat"
             android:title="My Ongoing Help" />

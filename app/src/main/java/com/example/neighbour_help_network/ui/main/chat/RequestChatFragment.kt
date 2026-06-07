@@ -13,6 +13,8 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.neighbour_help_network.R
 import com.example.neighbour_help_network.databinding.FragmentRequestChatBinding
+import com.example.neighbour_help_network.ui.main.MainActivity
+import com.google.android.material.chip.Chip
 
 /**
  * RequestChatFragment — Isolated chat screen for a specific help request.
@@ -40,15 +42,29 @@ class RequestChatFragment : Fragment() {
         val chatId = arguments?.getString("chatId") ?: return
         val chatTitle = arguments?.getString("chatTitle") ?: "Request Chat"
 
-        binding.toolbarChat.title = chatTitle
+        setupToolbar(chatTitle)
+        setupRecyclerView()
+        setupSendButton()
+        setupTranslateButton()
+        setupQuickReplies()
+        observeViewModel()
+
+        viewModel.fetchPartnerPhoneNumber(chatId)
+        viewModel.startListening(chatId)
+    }
+
+    private fun setupToolbar(title: String) {
+        binding.toolbarChat.title = title
+        
+        // Manual toolbar setup to prevent ConcurrentModificationException in NavController
+        binding.toolbarChat.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
         binding.toolbarChat.setNavigationOnClickListener {
-            findNavController().navigateUp()
+            findNavController().popBackStack()
         }
 
-        // Setup Call action menu in toolbar
         binding.toolbarChat.inflateMenu(R.menu.chat_menu)
         val callItem = binding.toolbarChat.menu.findItem(R.id.action_call)
-        callItem?.isVisible = false // Hidden initially
+        callItem?.isVisible = false
 
         binding.toolbarChat.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -60,21 +76,30 @@ class RequestChatFragment : Fragment() {
                         }
                         startActivity(intent)
                     } else {
-                        Toast.makeText(requireContext(), "Phone number not available.", Toast.LENGTH_SHORT).show()
+                        context?.let { Toast.makeText(it, "Phone number not available.", Toast.LENGTH_SHORT).show() }
                     }
                     true
                 }
                 else -> false
             }
         }
+    }
 
-        setupRecyclerView()
-        setupSendButton()
-        setupTranslateButton()
-        observeViewModel()
+    private fun setupQuickReplies() {
+        val quickReplyChips = listOf(
+            binding.chipOnMyWay,
+            binding.chipBeThereSoon,
+            binding.chipImHere,
+            binding.chipThankYou,
+            binding.chipOkay
+        )
 
-        viewModel.fetchPartnerPhoneNumber(chatId)
-        viewModel.startListening(chatId)
+        quickReplyChips.forEach { chip ->
+            chip.setOnClickListener {
+                val text = (it as Chip).text.toString()
+                viewModel.sendMessage(text)
+            }
+        }
     }
 
     override fun onDestroyView() {
@@ -108,36 +133,29 @@ class RequestChatFragment : Fragment() {
 
     private fun observeViewModel() {
         viewModel.messages.observe(viewLifecycleOwner) { messages ->
-            adapter.submitList(messages) {
-                if (messages.isNotEmpty()) {
-                    binding.rvMessages.scrollToPosition(messages.size - 1)
+            _binding?.let { b ->
+                adapter.submitList(messages) {
+                    if (messages.isNotEmpty()) {
+                        b.rvMessages.scrollToPosition(messages.size - 1)
+                    }
                 }
             }
         }
 
         viewModel.translateEnabled.observe(viewLifecycleOwner) { enabled ->
             adapter.isTranslateEnabled = enabled
-            binding.btnTranslate.text = if (enabled) {
-                "Urdu ON"
-            } else {
-                "Urdu OFF"
-            }
+            _binding?.btnTranslate?.text = if (enabled) "Urdu ON" else "Urdu OFF"
         }
 
         viewModel.sendResult.observe(viewLifecycleOwner) { result ->
             result ?: return@observe
             if (result.isFailure) {
-                Toast.makeText(
-                    requireContext(),
-                    "Failed to send: ${result.exceptionOrNull()?.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                context?.let { Toast.makeText(it, "Failed to send message", Toast.LENGTH_SHORT).show() }
             }
         }
 
         viewModel.partnerPhoneNumber.observe(viewLifecycleOwner) { phone ->
-            val callItem = binding.toolbarChat.menu.findItem(R.id.action_call)
-            callItem?.isVisible = !phone.isNullOrBlank()
+            _binding?.toolbarChat?.menu?.findItem(R.id.action_call)?.isVisible = !phone.isNullOrBlank()
         }
     }
 }

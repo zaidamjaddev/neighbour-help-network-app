@@ -9,15 +9,13 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.neighbour_help_network.databinding.FragmentLiveChatBinding
-import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.setupWithNavController
 import com.example.neighbour_help_network.R
+import com.example.neighbour_help_network.ui.main.MainActivity
+import com.google.android.material.chip.Chip
 
 /**
  * LiveChatFragment — Real-time community chat screen (Global Chat).
- * This fragment is tied to the Bottom Navigation.
  */
 class LiveChatFragment : Fragment() {
 
@@ -39,32 +37,42 @@ class LiveChatFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Always global chat for this fragment
         val chatId = "global_chat"
         
         setupToolbar()
         setupRecyclerView()
         setupSendButton()
         setupTranslateButton()
+        setupQuickReplies()
         observeViewModel()
 
         viewModel.startListening(chatId)
     }
 
     private fun setupToolbar() {
-        val navController = findNavController()
-        val appBarConfiguration = AppBarConfiguration(
-            setOf(
-                R.id.dashboardFragment,
-                R.id.nearbyFeedFragment,
-                R.id.acceptedRequestsFragment,
-                R.id.postRequestFragment,
-                R.id.liveChatFragment,
-                R.id.settingsFragment
-            ),
-            (activity as? AppCompatActivity)?.findViewById(R.id.drawerLayout)
+        val mainActivity = activity as? MainActivity ?: return
+        binding.toolbarChat.title = "Community Chat"
+        binding.toolbarChat.setNavigationIcon(R.drawable.ic_home)
+        binding.toolbarChat.setNavigationOnClickListener {
+            mainActivity.openDrawer()
+        }
+    }
+
+    private fun setupQuickReplies() {
+        val chips = listOf(
+            binding.chipOnMyWay,
+            binding.chipBeThereSoon,
+            binding.chipImHere,
+            binding.chipThankYou,
+            binding.chipOkay
         )
-        binding.toolbarChat.setupWithNavController(navController, appBarConfiguration)
+        
+        chips.forEach { chip ->
+            chip.setOnClickListener {
+                val text = (it as Chip).text.toString()
+                viewModel.sendMessage(text)
+            }
+        }
     }
 
     override fun onDestroyView() {
@@ -98,30 +106,26 @@ class LiveChatFragment : Fragment() {
 
     private fun observeViewModel() {
         viewModel.messages.observe(viewLifecycleOwner) { messages ->
-            adapter.submitList(messages) {
-                if (messages.isNotEmpty()) {
-                    binding.rvMessages.scrollToPosition(messages.size - 1)
+            _binding?.let { b ->
+                adapter.submitList(messages) {
+                    if (messages.isNotEmpty()) {
+                        b.rvMessages.scrollToPosition(messages.size - 1)
+                    }
                 }
             }
         }
 
         viewModel.translateEnabled.observe(viewLifecycleOwner) { enabled ->
             adapter.isTranslateEnabled = enabled
-            binding.btnTranslate.text = if (enabled) {
-                "Urdu ON"
-            } else {
-                "Urdu OFF"
-            }
+            _binding?.btnTranslate?.text = if (enabled) "Urdu ON" else "Urdu OFF"
         }
 
         viewModel.sendResult.observe(viewLifecycleOwner) { result ->
             result ?: return@observe
             if (result.isFailure) {
-                Toast.makeText(
-                    requireContext(),
-                    "Failed to send: ${result.exceptionOrNull()?.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                context?.let { ctx ->
+                    Toast.makeText(ctx, "Failed to send: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

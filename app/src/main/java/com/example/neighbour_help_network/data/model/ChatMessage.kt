@@ -15,5 +15,7 @@ data class ChatMessage(
     val senderName: String = "",
     val text: String = "",
     @ServerTimestamp
-    val timestamp: Date? = null
+    val timestamp: Date? = null,
+    // Local-only field for Gemini translation
+    var translatedText: String? = null
 )

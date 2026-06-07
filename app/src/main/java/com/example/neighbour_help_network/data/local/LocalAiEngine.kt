@@ -3,7 +3,7 @@ package com.example.neighbour_help_network.data.local
 import java.util.Locale
 
 /**
- * LocalAiEngine — Client-side processing singleton.
+ * LocalAiEngine — Reverted to local keyword-based processing (No Gemini AI).
  */
 object LocalAiEngine {
 
@@ -116,7 +116,7 @@ object LocalAiEngine {
             .trim()
     }
 
-    fun simulateTranslation(text: String, targetLanguage: String): String {
+    fun translateToUrdu(text: String): String {
         val cleanedInput = cleanForLookup(text)
 
         val translationsUrdu = mapOf(
@@ -152,10 +152,6 @@ object LocalAiEngine {
             "help"                      to "مدد (Madad)"
         )
 
-        return when (targetLanguage.lowercase(Locale.getDefault())) {
-            "urdu" -> translationsUrdu[cleanedInput]
-                ?: "[Urdu]: $text"
-            else   -> "[Translated]: $text"
-        }
+        return translationsUrdu[cleanedInput] ?: "[Urdu]: $text"
     }
 }

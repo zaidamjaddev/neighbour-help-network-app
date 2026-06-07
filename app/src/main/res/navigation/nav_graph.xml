@@ -39,4 +39,9 @@
         android:name="com.example.neighbour_help_network.ui.main.settings.SettingsFragment"
         android:label="Settings" />
 
+    <fragment
+        android:id="@+id/leaderboardFragment"
+        android:name="com.example.neighbour_help_network.ui.main.leaderboard.LeaderboardFragment"
+        android:label="Leaderboard" />
+
 </navigation>

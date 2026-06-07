@@ -75,6 +75,14 @@
     <string name="btn_translate">Translate (Urdu)</string>
     <string name="label_translated">Translated</string>
 
+    <!-- Quick Replies -->
+    <string name="reply_on_my_way">I am on my way</string>
+    <string name="reply_be_there_soon">I\'ll be there in 5 mins</string>
+    <string name="reply_im_here">I\'ve arrived</string>
+    <string name="reply_thank_you">Thank you</string>
+    <string name="reply_okay">Okay, got it</string>
+    <string name="reply_where_are_you">Where are you?</string>
+
     <!-- Settings -->
     <string name="label_settings_title">Settings</string>
     <string name="label_profile_info">Profile Information</string>

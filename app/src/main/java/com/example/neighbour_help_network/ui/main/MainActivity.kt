@@ -5,21 +5,22 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.view.MenuItem
+import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.bitmap.CircleCrop
 import com.bumptech.glide.request.RequestOptions
 import com.example.neighbour_help_network.R
 import com.example.neighbour_help_network.data.repository.AuthRepository
@@ -35,7 +36,10 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var navController: NavController
-    private lateinit var appBarConfiguration: AppBarConfiguration
+    
+    lateinit var appBarConfiguration: AppBarConfiguration
+        private set
+
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val authRepository = AuthRepository()
 
@@ -43,7 +47,7 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (!isGranted) {
-            Toast.makeText(this, "Notifications are disabled. You might miss urgent help alerts.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Notifications are disabled.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -53,6 +57,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         setupNavigation()
+        setupBackPressHandler()
         updateNavHeader()
         askNotificationPermission()
     }
@@ -69,7 +74,6 @@ class MainActivity : AppCompatActivity() {
             .findFragmentById(R.id.navHostFragment) as NavHostFragment
         navController = navHostFragment.navController
 
-        // Top-level destinations (those without a back button)
         appBarConfiguration = AppBarConfiguration(
             setOf(
                 R.id.dashboardFragment,
@@ -77,47 +81,70 @@ class MainActivity : AppCompatActivity() {
                 R.id.acceptedRequestsFragment,
                 R.id.postRequestFragment,
                 R.id.liveChatFragment,
-                R.id.settingsFragment
+                R.id.settingsFragment,
+                R.id.leaderboardFragment
             ),
             binding.drawerLayout
         )
 
+        // Manual Item Selection to avoid ConcurrentModificationException
         binding.navigationView.setNavigationItemSelectedListener { menuItem ->
-            val handled = when (menuItem.itemId) {
-                R.id.dashboardFragment,
-                R.id.nearbyFeedFragment,
-                R.id.acceptedRequestsFragment,
-                R.id.postRequestFragment,
-                R.id.liveChatFragment,
-                R.id.settingsFragment -> {
-                    binding.drawerLayout.closeDrawer(GravityCompat.START)
-                    if (navController.currentDestination?.id != menuItem.itemId) {
-                        navController.navigate(menuItem.itemId)
+            val id = menuItem.itemId
+            if (navController.currentDestination?.id != id) {
+                // Navigate in a post to ensure no conflict with transition state
+                binding.root.post {
+                    try {
+                        navController.navigate(id)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
-                    true
                 }
-                else -> false
             }
-            handled
+            binding.drawerLayout.closeDrawer(GravityCompat.START)
+            true
+        }
+
+        // Sync drawer state with current destination
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            binding.navigationView.setCheckedItem(destination.id)
         }
     }
 
     /**
-     * Populates the nav drawer header with the user's display name, email, and profile photo.
-     * Falls back to a placeholder icon if no photo URL is stored.
+     * Public method for fragments to open the drawer.
      */
+    fun openDrawer() {
+        binding.drawerLayout.openDrawer(GravityCompat.START)
+    }
+
+    private fun setupBackPressHandler() {
+        val drawerCallback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                binding.drawerLayout.closeDrawer(GravityCompat.START)
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, drawerCallback)
+
+        binding.drawerLayout.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
+            override fun onDrawerOpened(drawerView: View) {
+                drawerCallback.isEnabled = true
+            }
+            override fun onDrawerClosed(drawerView: View) {
+                drawerCallback.isEnabled = false
+            }
+        })
+    }
+
     private fun updateNavHeader() {
         val headerView = binding.navigationView.getHeaderView(0)
         val tvUserEmail = headerView.findViewById<TextView>(R.id.tvUserEmail)
         val tvUserName = headerView.findViewById<TextView>(R.id.tvNavUserName)
         val ivUserPhoto = headerView.findViewById<ImageView>(R.id.ivNavUserPhoto)
 
-        // Populate from FirebaseAuth immediately (fast)
         val firebaseUser = auth.currentUser
         tvUserEmail.text = firebaseUser?.email ?: "neighbor@hoodhelp.com"
         tvUserName.text = firebaseUser?.displayName?.takeIf { it.isNotBlank() } ?: "HoodHelp"
 
-        // Load photo from Auth profile if available (may have been set at sign-up)
         val authPhotoUrl = firebaseUser?.photoUrl?.toString()
         if (!authPhotoUrl.isNullOrBlank()) {
             loadAvatar(ivUserPhoto, authPhotoUrl)
@@ -126,7 +153,6 @@ class MainActivity : AppCompatActivity() {
             ivUserPhoto.setImageResource(R.drawable.ic_person_placeholder)
         }
 
-        // Also fetch from Firestore for the most up-to-date photoUrl
         lifecycleScope.launch {
             try {
                 val result = authRepository.getUserProfile()
@@ -134,7 +160,7 @@ class MainActivity : AppCompatActivity() {
                     if (user.displayName.isNotBlank()) tvUserName.text = user.displayName
                     if (user.photoUrl.isNotBlank()) loadAvatar(ivUserPhoto, user.photoUrl)
                 }
-            } catch (_: Exception) { /* silently ignore */ }
+            } catch (_: Exception) { }
         }
     }
 
@@ -159,9 +185,7 @@ class MainActivity : AppCompatActivity() {
                     .into(imageView)
                 return
             }
-        } catch (_: Exception) {
-            // fall back to URL loading
-        }
+        } catch (_: Exception) { }
 
         Glide.with(this)
             .load(url)
@@ -171,15 +195,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onSupportNavigateUp(): Boolean {
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
-    }
-
-    @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
-    override fun onBackPressed() {
-        if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            binding.drawerLayout.closeDrawer(GravityCompat.START)
-        } else {
-            super.onBackPressed()
-        }
     }
 
     private fun askNotificationPermission() {

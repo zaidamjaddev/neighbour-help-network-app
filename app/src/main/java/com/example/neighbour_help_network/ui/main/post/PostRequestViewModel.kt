@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 
 /**
  * PostRequestViewModel — Manages state for the Post Help Request screen.
+ * Now powered by Gemini AI for request analysis.
  */
 class PostRequestViewModel : ViewModel() {
 
@@ -24,8 +25,15 @@ class PostRequestViewModel : ViewModel() {
     val requestImagePath = MutableLiveData<String?>(null)
 
     fun analyzeDescription(description: String) {
-        val result = LocalAiEngine.analyzeHelpDescription(description)
-        aiResult.value = result
+        isLoading.value = true
+        viewModelScope.launch {
+            try {
+                val result = LocalAiEngine.analyzeHelpDescription(description)
+                aiResult.postValue(result)
+            } finally {
+                isLoading.postValue(false)
+            }
+        }
     }
 
     fun setRequestImagePath(path: String?) {
@@ -44,14 +52,13 @@ class PostRequestViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                // Fetch the latest profile name directly from Firestore (Exactly as shown in Settings)
                 val profile = authRepository.getUserProfile().getOrNull()
                 
-                // Prioritize Profile Display Name > Auth Display Name > Fallback
                 val finalDisplayName = profile?.displayName?.trim()?.takeIf { it.isNotBlank() }
                     ?: firebaseUser.displayName?.trim()?.takeIf { it.isNotBlank() }
                     ?: "A Neighbour"
 
+                // If AI hasn't run yet, run it now
                 val analysis = aiResult.value ?: LocalAiEngine.analyzeHelpDescription(description)
 
                 val request = HelpRequest(

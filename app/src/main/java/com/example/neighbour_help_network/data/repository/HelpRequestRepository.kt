@@ -2,11 +2,10 @@ package com.example.neighbour_help_network.data.repository
 
 import android.util.Log
 import com.example.neighbour_help_network.data.model.HelpRequest
-import com.example.neighbour_help_network.data.repository.AuthRepository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -16,7 +15,6 @@ class HelpRequestRepository {
 
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
     private val collection = firestore.collection("help_requests")
-    private val authRepository = AuthRepository()
 
     suspend fun postRequest(request: HelpRequest): Result<String> = runCatching {
         collection.add(request).await().id
@@ -48,8 +46,6 @@ class HelpRequestRepository {
 
     /**
      * Listens to requests with specific statuses.
-     * We sort client-side to ensure immediate local updates (even with null timestamps)
-     * and to avoid requiring mandatory composite indexes for simple filtering.
      */
     fun listenToRequestsByStatus(
         statusList: List<String>,
@@ -133,6 +129,10 @@ class HelpRequestRepository {
         ).await()
     }
 
+    /**
+     * Completes a request and awards points to both helper and requester.
+     * Transaction ensures points are incremented atomically.
+     */
     suspend fun completeRequest(requestId: String): Result<Unit> = runCatching {
         val docRef = collection.document(requestId)
         firestore.runTransaction { transaction ->
@@ -140,23 +140,33 @@ class HelpRequestRepository {
             val request = snapshot.toObject(HelpRequest::class.java)
                 ?: throw IllegalStateException("Request not found")
 
-            transaction.update(docRef, "status", "resolved")
-            request.acceptedBy.takeIf { it.isNotBlank() }?.let { helperId ->
+            if (request.status == "resolved") return@runTransaction null
+
+            // Mark request as resolved
+            transaction.update(docRef, mapOf(
+                "status" to "resolved",
+                "resolvedAt" to FieldValue.serverTimestamp()
+            ))
+
+            // Award points to the Helper (+5 pts)
+            if (request.acceptedBy.isNotBlank()) {
                 transaction.set(
-                    firestore.collection("users").document(helperId),
+                    firestore.collection("users").document(request.acceptedBy),
                     mapOf(
-                        "totalPoints" to com.google.firebase.firestore.FieldValue.increment(5L),
-                        "resolvedRequests" to com.google.firebase.firestore.FieldValue.increment(1L)
+                        "totalPoints" to FieldValue.increment(5L),
+                        "resolvedRequests" to FieldValue.increment(1L)
                     ),
                     SetOptions.merge()
                 )
             }
-            request.userId.takeIf { it.isNotBlank() }?.let { requesterId ->
+
+            // Award points to the Requester (+2 pts)
+            if (request.userId.isNotBlank()) {
                 transaction.set(
-                    firestore.collection("users").document(requesterId),
+                    firestore.collection("users").document(request.userId),
                     mapOf(
-                        "totalPoints" to com.google.firebase.firestore.FieldValue.increment(2L),
-                        "resolvedRequests" to com.google.firebase.firestore.FieldValue.increment(1L)
+                        "totalPoints" to FieldValue.increment(2L),
+                        "resolvedRequests" to FieldValue.increment(1L)
                     ),
                     SetOptions.merge()
                 )

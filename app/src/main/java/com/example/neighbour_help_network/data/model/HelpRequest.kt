@@ -26,5 +26,7 @@ data class HelpRequest(
     val acceptedBy: String = "",
     val acceptedByName: String = "",    // Name of the person who accepted help
     @ServerTimestamp
-    val timestamp: Date? = null
+    val timestamp: Date? = null,
+    @ServerTimestamp
+    val resolvedAt: Date? = null
 )

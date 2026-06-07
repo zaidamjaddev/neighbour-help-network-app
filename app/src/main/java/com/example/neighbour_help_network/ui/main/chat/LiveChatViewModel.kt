@@ -3,6 +3,7 @@ package com.example.neighbour_help_network.ui.main.chat
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.neighbour_help_network.data.local.LocalAiEngine
 import com.example.neighbour_help_network.data.model.ChatMessage
 import com.example.neighbour_help_network.data.repository.ChatRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -12,8 +13,7 @@ import kotlinx.coroutines.launch
 
 /**
  * LiveChatViewModel — Manages the real-time Firestore message stream for LiveChatFragment.
- *
- * Defaults to the "global_chat" room. Translation toggle state is held in [translateEnabled].
+ * Now powered by Gemini AI for real-time Urdu translation.
  */
 class LiveChatViewModel : ViewModel() {
 
@@ -33,7 +33,12 @@ class LiveChatViewModel : ViewModel() {
         currentChatId = chatId
         listenerReg?.remove()
         listenerReg = repository.listenToMessages(chatId) { list ->
-            messages.postValue(list)
+            // If translation is enabled, translate new messages
+            if (translateEnabled.value == true) {
+                translateMessages(list)
+            } else {
+                messages.postValue(list)
+            }
         }
     }
 
@@ -51,9 +56,27 @@ class LiveChatViewModel : ViewModel() {
         }
     }
 
-    /** Toggles the Urdu translation overlay on/off. */
+    /** Toggles the Urdu translation overlay on/off and translates existing messages if needed. */
     fun toggleTranslate() {
-        translateEnabled.value = !(translateEnabled.value ?: false)
+        val newState = !(translateEnabled.value ?: false)
+        translateEnabled.value = newState
+        if (newState) {
+            translateMessages(messages.value ?: emptyList())
+        }
+    }
+
+    private fun translateMessages(list: List<ChatMessage>) {
+        viewModelScope.launch {
+            val translatedList = list.map { msg ->
+                if (msg.translatedText == null) {
+                    val translation = LocalAiEngine.translateToUrdu(msg.text)
+                    msg.copy(translatedText = translation)
+                } else {
+                    msg
+                }
+            }
+            messages.postValue(translatedList)
+        }
     }
 
     /** Fetches the other chat participant's phone number and displayName from Firestore. */
@@ -68,7 +91,6 @@ class LiveChatViewModel : ViewModel() {
                     val userId = requestDoc.getString("userId") ?: ""
                     val acceptedBy = requestDoc.getString("acceptedBy") ?: ""
 
-                    // Determine the other participant's UID
                     val otherUid = if (currentUid == userId) {
                         acceptedBy
                     } else {

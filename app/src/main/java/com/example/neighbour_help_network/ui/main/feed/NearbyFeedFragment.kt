@@ -7,23 +7,20 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.neighbour_help_network.R
 import com.example.neighbour_help_network.data.model.HelpRequest
 import com.example.neighbour_help_network.databinding.FragmentNearbyFeedBinding
+import com.example.neighbour_help_network.ui.main.MainActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.snackbar.Snackbar
 
 /**
  * NearbyFeedFragment — Real-time scrolling feed of nearby help requests.
- * Displays help requests and handles the transition to chat.
  */
 class NearbyFeedFragment : Fragment() {
 
@@ -51,19 +48,13 @@ class NearbyFeedFragment : Fragment() {
     }
 
     private fun setupToolbar() {
-        val navController = findNavController()
-        val appBarConfiguration = AppBarConfiguration(
-            setOf(
-                R.id.dashboardFragment,
-                R.id.nearbyFeedFragment,
-                R.id.acceptedRequestsFragment,
-                R.id.postRequestFragment,
-                R.id.liveChatFragment,
-                R.id.settingsFragment
-            ),
-            (activity as? AppCompatActivity)?.findViewById(R.id.drawerLayout)
-        )
-        binding.toolbarFeed.setupWithNavController(navController, appBarConfiguration)
+        val mainActivity = activity as? MainActivity ?: return
+        binding.toolbarFeed.title = "Nearby Feed"
+        // Use a standard hamburger icon if available, otherwise ic_home
+        binding.toolbarFeed.setNavigationIcon(R.drawable.ic_home) 
+        binding.toolbarFeed.setNavigationOnClickListener {
+            mainActivity.openDrawer()
+        }
     }
 
     private fun setupTabs() {
@@ -83,9 +74,8 @@ class NearbyFeedFragment : Fragment() {
         adapter = HelpRequestAdapter(
             onAcceptClicked = { request -> 
                 viewModel.acceptRequest(request.id)
-                val navController = findNavController()
-                if (navController.currentDestination?.id == R.id.nearbyFeedFragment) {
-                    Snackbar.make(binding.root, "Accepted. Open it from My Ongoing Help to start chat.", Snackbar.LENGTH_SHORT).show()
+                _binding?.root?.let { 
+                    Snackbar.make(it, "Accepted. Open it from My Ongoing Help to start chat.", Snackbar.LENGTH_SHORT).show()
                 }
             },
             onCompleteClicked = { request -> showCompleteConfirmation(request) },
@@ -98,36 +88,42 @@ class NearbyFeedFragment : Fragment() {
     }
 
     private fun openChat(request: HelpRequest) {
-        val bundle = Bundle().apply {
-            putString("chatId", request.id)
-            putString("chatTitle", "Chat: ${request.title}")
+        if (!isAdded) return
+        val navController = findNavController()
+        if (navController.currentDestination?.id == R.id.nearbyFeedFragment) {
+            val bundle = Bundle().apply {
+                putString("chatId", request.id)
+                putString("chatTitle", "Chat: ${request.title}")
+            }
+            navController.navigate(R.id.requestChatFragment, bundle)
         }
-        findNavController().navigate(R.id.requestChatFragment, bundle)
     }
 
     private fun showCompleteConfirmation(request: HelpRequest) {
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Complete Request")
-            .setMessage("Mark this request as completed? It will be moved to history.")
-            .setPositiveButton("Complete") { _, _ ->
-                viewModel.completeRequest(request.id)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        context?.let { ctx ->
+            MaterialAlertDialogBuilder(ctx)
+                .setTitle("Complete Request")
+                .setMessage("Mark this request as completed? It will be moved to history.")
+                .setPositiveButton("Complete") { _, _ ->
+                    viewModel.completeRequest(request.id)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
     }
 
     private fun showUpdateDialog(request: HelpRequest) {
-        val context = requireContext()
-        val layout = LinearLayout(context).apply {
+        val ctx = context ?: return
+        val layout = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 24, 48, 0)
         }
-        val etTitle = EditText(context).apply { hint = "Title"; setText(request.title) }
-        val etDesc = EditText(context).apply { hint = "Description"; setText(request.description); minLines = 3 }
+        val etTitle = EditText(ctx).apply { hint = "Title"; setText(request.title) }
+        val etDesc = EditText(ctx).apply { hint = "Description"; setText(request.description); minLines = 3 }
         layout.addView(etTitle)
         layout.addView(etDesc)
 
-        MaterialAlertDialogBuilder(context)
+        MaterialAlertDialogBuilder(ctx)
             .setTitle("Update Help Request")
             .setView(layout)
             .setPositiveButton("Update") { _, _ ->
@@ -142,12 +138,14 @@ class NearbyFeedFragment : Fragment() {
     }
 
     private fun showDeleteConfirmation(request: HelpRequest) {
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Delete Request")
-            .setMessage("Are you sure you want to delete this help request?")
-            .setPositiveButton("Delete") { _, _ -> viewModel.deleteRequest(request.id) }
-            .setNegativeButton("Cancel", null)
-            .show()
+        context?.let { ctx ->
+            MaterialAlertDialogBuilder(ctx)
+                .setTitle("Delete Request")
+                .setMessage("Are you sure you want to delete this help request?")
+                .setPositiveButton("Delete") { _, _ -> viewModel.deleteRequest(request.id) }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
     }
 
     private fun observeViewModel() {
@@ -161,27 +159,31 @@ class NearbyFeedFragment : Fragment() {
         viewModel.actionResult.observe(viewLifecycleOwner) { result ->
             result ?: return@observe
             if (result.isFailure) {
-                Toast.makeText(requireContext(), "Error: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                context?.let { ctx ->
+                    Toast.makeText(ctx, "Error: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                }
             }
             viewModel.resetActionResult()
         }
     }
 
     private fun updateUiState(loading: Boolean, list: List<HelpRequest>) {
-        if (loading) {
-            binding.progressFeed.visibility = View.VISIBLE
-            binding.layoutEmptyState.visibility = View.GONE
-            binding.rvRequests.visibility = View.GONE
-        } else {
-            binding.progressFeed.visibility = View.GONE
-            if (list.isEmpty()) {
-                binding.layoutEmptyState.visibility = View.VISIBLE
-                binding.rvRequests.visibility = View.GONE
-                val activeTab = binding.tabLayout.selectedTabPosition
-                binding.tvEmptyMessage.text = if (activeTab == 0) getString(R.string.label_no_requests) else "No completed requests found."
+        _binding?.let { b ->
+            if (loading) {
+                b.progressFeed.visibility = View.VISIBLE
+                b.layoutEmptyState.visibility = View.GONE
+                b.rvRequests.visibility = View.GONE
             } else {
-                binding.layoutEmptyState.visibility = View.GONE
-                binding.rvRequests.visibility = View.VISIBLE
+                b.progressFeed.visibility = View.GONE
+                if (list.isEmpty()) {
+                    b.layoutEmptyState.visibility = View.VISIBLE
+                    b.rvRequests.visibility = View.GONE
+                    val activeTab = b.tabLayout.selectedTabPosition
+                    b.tvEmptyMessage.text = if (activeTab == 0) "No active requests nearby." else "No completed requests found."
+                } else {
+                    b.layoutEmptyState.visibility = View.GONE
+                    b.rvRequests.visibility = View.VISIBLE
+                }
             }
         }
     }

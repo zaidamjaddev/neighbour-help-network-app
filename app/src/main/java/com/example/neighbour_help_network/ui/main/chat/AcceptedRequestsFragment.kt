@@ -10,11 +10,10 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.neighbour_help_network.R
 import com.example.neighbour_help_network.databinding.FragmentAcceptedRequestsBinding
-import androidx.appcompat.app.AppCompatActivity
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.setupWithNavController
+import com.example.neighbour_help_network.ui.main.MainActivity
+
 /**
- * AcceptedRequestsFragment — Shows a list of ongoing help chats (WhatsApp-style).
+ * AcceptedRequestsFragment — Shows a list of ongoing help chats.
  */
 class AcceptedRequestsFragment : Fragment() {
 
@@ -40,28 +39,25 @@ class AcceptedRequestsFragment : Fragment() {
     }
 
     private fun setupToolbar() {
-        val navController = findNavController()
-        val appBarConfiguration = AppBarConfiguration(
-            setOf(
-                R.id.dashboardFragment,
-                R.id.nearbyFeedFragment,
-                R.id.acceptedRequestsFragment,
-                R.id.postRequestFragment,
-                R.id.liveChatFragment,
-                R.id.settingsFragment
-            ),
-            (activity as? AppCompatActivity)?.findViewById(R.id.drawerLayout)
-        )
-        binding.toolbarAccepted.setupWithNavController(navController, appBarConfiguration)
+        val mainActivity = activity as? MainActivity ?: return
+        binding.toolbarAccepted.title = "My Ongoing Help"
+        binding.toolbarAccepted.setNavigationIcon(R.drawable.ic_home)
+        binding.toolbarAccepted.setNavigationOnClickListener {
+            mainActivity.openDrawer()
+        }
     }
 
     private fun setupRecyclerView() {
         adapter = AcceptedRequestsAdapter { request ->
-            val bundle = Bundle().apply {
-                putString("chatId", request.id)
-                putString("chatTitle", "Chat: ${request.title}")
+            if (!isAdded) return@AcceptedRequestsAdapter
+            val navController = findNavController()
+            if (navController.currentDestination?.id == R.id.acceptedRequestsFragment) {
+                val bundle = Bundle().apply {
+                    putString("chatId", request.id)
+                    putString("chatTitle", "Chat: ${request.title}")
+                }
+                navController.navigate(R.id.requestChatFragment, bundle)
             }
-            findNavController().navigate(R.id.requestChatFragment, bundle)
         }
         binding.rvAcceptedRequests.layoutManager = LinearLayoutManager(requireContext())
         binding.rvAcceptedRequests.adapter = adapter
@@ -69,12 +65,14 @@ class AcceptedRequestsFragment : Fragment() {
 
     private fun observeViewModel() {
         viewModel.isLoading.observe(viewLifecycleOwner) { loading ->
-            binding.progressAccepted.visibility = if (loading) View.VISIBLE else View.GONE
+            _binding?.progressAccepted?.visibility = if (loading) View.VISIBLE else View.GONE
         }
 
         viewModel.acceptedRequests.observe(viewLifecycleOwner) { list ->
-            adapter.submitList(list)
-            binding.layoutEmptyAccepted.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+            _binding?.let { b ->
+                adapter.submitList(list)
+                b.layoutEmptyAccepted.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+            }
         }
     }
 

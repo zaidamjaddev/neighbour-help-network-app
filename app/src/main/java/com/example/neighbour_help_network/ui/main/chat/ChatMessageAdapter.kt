@@ -6,7 +6,6 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.example.neighbour_help_network.data.local.LocalAiEngine
 import com.example.neighbour_help_network.data.model.ChatMessage
 import com.example.neighbour_help_network.databinding.ItemChatMessageBinding
 import com.google.firebase.auth.FirebaseAuth
@@ -15,12 +14,7 @@ import java.util.Locale
 
 /**
  * ChatMessageAdapter — DiffUtil ListAdapter for real-time chat messages.
- *
- * Renders sent messages (right-aligned, navy bubble) and received messages
- * (left-aligned, mint bubble) using a single item_chat_message.xml layout
- * with two visibility-toggled sub-layouts.
- *
- * Supports per-message Urdu translation via LocalAiEngine when [isTranslateEnabled] is true.
+ * Now displays Gemini AI translations when enabled.
  */
 class ChatMessageAdapter : ListAdapter<ChatMessage, ChatMessageAdapter.ViewHolder>(DIFF_CALLBACK) {
 
@@ -40,13 +34,14 @@ class ChatMessageAdapter : ListAdapter<ChatMessage, ChatMessageAdapter.ViewHolde
             val isSentByMe = message.senderId == currentUserId
             val timeStr = message.timestamp?.let { timeFormat.format(it) } ?: ""
 
-            // Apply translation if enabled
-            val displayText = if (isTranslateEnabled) {
-                LocalAiEngine.simulateTranslation(message.text, "urdu")
+            // Use pre-calculated Gemini translation if available and enabled
+            val displayText = if (isTranslateEnabled && !message.translatedText.isNullOrBlank()) {
+                message.translatedText
             } else {
                 message.text
             }
-            val wasTranslated = isTranslateEnabled
+
+            val wasTranslated = isTranslateEnabled && !message.translatedText.isNullOrBlank()
 
             if (isSentByMe) {
                 binding.layoutSent.visibility = View.VISIBLE

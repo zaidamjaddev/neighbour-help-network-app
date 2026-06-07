@@ -19,12 +19,11 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.setupWithNavController
 import com.example.neighbour_help_network.R
 import com.example.neighbour_help_network.data.model.User
 import com.example.neighbour_help_network.databinding.FragmentDashboardBinding
 import com.example.neighbour_help_network.service.NHNFcmService
+import com.example.neighbour_help_network.ui.main.MainActivity
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -59,20 +58,30 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
         setupMap()
         setupSeekBar()
         setupSosFab()
+        setupLeaderboardShortcut()
         observeViewModel()
         viewModel.startListeningToHelpers()
         viewModel.startListeningToKarma()
     }
 
     private fun setupToolbar() {
-        val navController = findNavController()
-        // Define top-level destinations to show hamburger instead of back arrow
-        val appBarConfiguration = AppBarConfiguration(
-            setOf(R.id.dashboardFragment, R.id.nearbyFeedFragment, R.id.acceptedRequestsFragment, 
-                  R.id.postRequestFragment, R.id.liveChatFragment, R.id.settingsFragment),
-            (activity as? AppCompatActivity)?.findViewById(R.id.drawerLayout)
-        )
-        binding.toolbarDashboard.setupWithNavController(navController, appBarConfiguration)
+        val mainActivity = activity as? MainActivity ?: return
+        binding.toolbarDashboard.title = getString(R.string.app_name)
+        binding.toolbarDashboard.setNavigationIcon(R.drawable.ic_home)
+        binding.toolbarDashboard.setNavigationOnClickListener {
+            mainActivity.openDrawer()
+        }
+    }
+
+    private fun setupLeaderboardShortcut() {
+        binding.cardKarma.setOnClickListener {
+            if (isAdded) {
+                val navController = findNavController()
+                if (navController.currentDestination?.id == R.id.dashboardFragment) {
+                    navController.navigate(R.id.leaderboardFragment)
+                }
+            }
+        }
     }
 
     private fun setupMap() {
@@ -88,7 +97,8 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun requestLocationAndCenter() {
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        val ctx = context ?: return
+        if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             enableMapLocation()
         } else {
             ActivityCompat.requestPermissions(
@@ -100,10 +110,13 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun enableMapLocation() {
-        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
+        val ctx = context ?: return
+        if (ActivityCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
         googleMap?.isMyLocationEnabled = true
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            location?.let { onLocationReceived(it.latitude, it.longitude) } ?: requestFreshLocation()
+            if (isAdded) {
+                location?.let { onLocationReceived(it.latitude, it.longitude) } ?: requestFreshLocation()
+            }
         }
     }
 
@@ -111,11 +124,15 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L).setMaxUpdates(1).build()
         locationCallbackRef = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
-                result.lastLocation?.let { onLocationReceived(it.latitude, it.longitude) }
+                if (isAdded) {
+                    result.lastLocation?.let { onLocationReceived(it.latitude, it.longitude) }
+                }
                 locationCallbackRef?.let { fusedLocationClient.removeLocationUpdates(it) }
             }
         }
-        fusedLocationClient.requestLocationUpdates(request, locationCallbackRef!!, Looper.getMainLooper())
+        try {
+            fusedLocationClient.requestLocationUpdates(request, locationCallbackRef!!, Looper.getMainLooper())
+        } catch (e: SecurityException) { }
     }
 
     private fun onLocationReceived(lat: Double, lng: Double) {
@@ -125,15 +142,16 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
         googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng, 14f))
         drawRadiusCircle(latlng, (viewModel.radiusKm.value ?: 5) * 1000.0)
         viewModel.updateUserLocation(lat, lng)
-        NHNFcmService.startLocalListeners(lat, lng, requireContext().applicationContext)
+        context?.applicationContext?.let { NHNFcmService.startLocalListeners(lat, lng, it) }
         
-        binding.tvMapStatusText.text = "Location Active"
+        _binding?.tvMapStatusText?.text = "Location Active"
     }
 
     private fun drawRadiusCircle(center: LatLng, radiusMeters: Double) {
+        val ctx = context ?: return
         radiusCircle?.remove()
         radiusCircle = googleMap?.addCircle(CircleOptions().center(center).radius(radiusMeters)
-            .strokeColor(ContextCompat.getColor(requireContext(), R.color.colorPrimary))
+            .strokeColor(ContextCompat.getColor(ctx, R.color.colorPrimary))
             .fillColor(0x152563EB).strokeWidth(3f))
     }
 
@@ -147,33 +165,39 @@ class DashboardFragment : Fragment(), OnMapReadyCallback {
 
     private fun setupSosFab() {
         binding.fabSos.setOnClickListener {
-            AlertDialog.Builder(requireContext())
-                .setTitle("Confirm SOS")
-                .setMessage("This will alert all nearby neighbors. Are you sure?")
-                .setPositiveButton("Send SOS") { _, _ -> 
-                    currentLocation?.let { viewModel.postSosAlert(it.latitude, it.longitude) }
-                }
-                .setNegativeButton("Cancel", null).show()
+            context?.let { ctx ->
+                AlertDialog.Builder(ctx)
+                    .setTitle("Confirm SOS")
+                    .setMessage("This will alert all nearby neighbors. Are you sure?")
+                    .setPositiveButton("Send SOS") { _, _ -> 
+                        currentLocation?.let { viewModel.postSosAlert(it.latitude, it.longitude) }
+                    }
+                    .setNegativeButton("Cancel", null).show()
+            }
         }
     }
 
     private fun observeViewModel() {
         viewModel.radiusKm.observe(viewLifecycleOwner) { km ->
-            binding.tvRadiusLabel.text = getString(R.string.radius_km_format, km)
-            currentLocation?.let { drawRadiusCircle(it, km * 1000.0) }
+            _binding?.let { b ->
+                b.tvRadiusLabel.text = getString(R.string.radius_km_format, km)
+                currentLocation?.let { drawRadiusCircle(it, km * 1000.0) }
+            }
         }
         viewModel.nearbyHelpers.observe(viewLifecycleOwner) { updateHelperMarkers(it) }
         viewModel.nearbyUsersCount.observe(viewLifecycleOwner) { count ->
-            binding.tvNearbyUsersCount.text = getString(R.string.neighbours_in_radius, count)
-            binding.tvNearbyCountBadge.text = count.toString()
+            _binding?.let { b ->
+                b.tvNearbyUsersCount.text = getString(R.string.neighbours_in_radius, count)
+                b.tvNearbyCountBadge.text = count.toString()
+            }
         }
 
         viewModel.helpPoints.observe(viewLifecycleOwner) { points ->
-            binding.tvKarmaPoints.text = points.toString()
+            _binding?.tvKarmaPoints?.text = points.toString()
         }
 
         viewModel.helpBadge.observe(viewLifecycleOwner) { badge ->
-            binding.tvHelpBadge.text = badge
+            _binding?.tvHelpBadge?.text = badge
         }
     }
 
